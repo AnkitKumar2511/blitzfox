@@ -1,0 +1,461 @@
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Background overlay container */
+.bg-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+
+/* Light mode background */
+.app-wrapper.light ~ .bg-blur { 
+  background-image: url('/li.jpg'); 
+  background-size: cover;  /* or 'contain' depending on what you want */
+  background-position: center; 
+  background-repeat: no-repeat;
+  z-index: -1; /* stays behind your content */
+}
+
+/* Dark mode background */
+.app-wrapper.dark ~ .bg-blur { 
+  background-image: url('/da.jpg'); 
+    background-size: cover;  /* or 'contain' depending on what you want */
+  background-position: center; 
+  background-repeat: no-repeat;
+  z-index: -1; /* stays behind your content */
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: monospace, monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  outline: none;
+}
+
+.app-wrapper.dark, .app-wrapper.light {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.app-wrapper.dark { color: white; }
+.app-wrapper.light { color: black; }
+
+/* Navbar */
+.navbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 70px;
+  padding: 0px 40px;
+  background: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
+.nav-left .nav-logo { height: 120px; width: auto; }
+
+.nav-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.nav-item {
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: inherit;
+}
+
+.switch-realm {
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+.switch-realm:hover { background-color: rgba(128,128,128,0.2); }
+
+.nav-right { display: flex; align-items: center; margin-right: 55px; }
+
+.join-club {
+  background-color: transparent;
+  border: none;
+  color: inherit;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.join-club:hover { background-color: rgba(128,128,128,0.2); border-radius: 6px; }
+
+/* Metrics box with glass effect */
+.metrics-box {
+  background: rgba(255, 255, 255, 0.08); /* transparent glass look */
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+
+  margin-top: 230px;
+  margin-bottom: 3rem;
+  max-width: 900px;
+  width: 100%;
+  flex-wrap: wrap; 
+  display: flex;
+  justify-content: center;
+  padding: 5px 0;
+  position: relative;
+  transition: transform 0.6s ease;
+  overflow: hidden;
+}
+
+/* Flip animation */
+.metrics-box.flipped {
+  transform: rotateX(180deg);
+}
+
+/* Keep inside elements aligned when flipped */
+.metrics-box.flipped .status-bar {
+  transform: rotateX(180deg);
+  transform-style: preserve-3d;
+}
+
+.liquid-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #b02a2a 0%, #d75c5c 100%);
+  opacity: 0.25;
+  pointer-events: none;
+  width: 0%;
+  z-index: -1;
+  transition-property: width;
+}
+
+.liquid-fill.running {
+  width: 100%;
+  transition-timing-function: linear;
+}
+
+/* Light mode liquid */
+.app-wrapper.light .liquid-fill {
+  background: linear-gradient(90deg, #f0d8c9 0%, #d75c5c 100%);
+}
+
+/* Dark mode liquid */
+.app-wrapper.dark .liquid-fill {
+  background: linear-gradient(90deg, #004080 0%, #3399ff 100%);
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  gap: 4rem;
+  font-weight: 600;
+  font-size: 1.75rem;
+  color: inherit;
+  align-items: center;
+  flex-wrap: wrap;
+  cursor: default;
+  outline: none;
+}
+
+.metric { display: flex; align-items: center; gap: 0.5rem; }
+.metric > span { font-size: 0.9rem; }
+.metric-icon { font-size: 0.9rem; color: currentColor; }
+.metric-value { display: inline-block; min-width: 4ch; text-align: right; }
+
+.metric-separator {
+  width: 6px;
+  height: 25px;
+  border-radius: 12px;
+  background: currentColor;
+  opacity: 0.25;
+  align-self: center;
+}
+
+.app-wrapper.light .metric-separator {
+  background-color: #f0d8c9; /* darker separator for light mode */
+  border: 1px solid rgb(149, 110, 110);
+}
+
+.app-wrapper.dark .metric-separator {
+  background-color: rgba(255, 255, 255, 0.518); /* darker separator for light mode */
+}
+
+
+.time-selector { display: flex; gap: 15px; margin-left: 8px; }
+.time-button {
+  background-color: transparent;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: inherit;
+  transition: background-color 0.25s ease;
+  outline: none;
+}
+.time-button.selected { font-weight: 700; }
+.time-button:hover:not(.selected) { 
+  color: rgba(0,0,0,0.741); 
+}
+
+/* Light mode hover for time buttons */
+.app-wrapper.light .time-button:hover:not(.selected) {
+  color: #222222; /* dark text for visibility on light bg */
+  background-color: rgba(0, 0, 0, 0.08); /* subtle translucent overlay */
+  border-radius: 6px;
+  transition: background-color 0.25s ease;
+}
+
+/* Selected button in light mode */
+.app-wrapper.light .time-button.selected {
+  font-weight: 700;
+  background-color: rgba(0, 0, 0, 0.12); /* slightly stronger highlight */
+  border-radius: 6px;
+}
+
+/* Dark mode hover for time buttons */
+.app-wrapper.dark .time-button:hover:not(.selected) {
+  color: #ffffff; /* keep text white */
+  background-color: rgba(255, 255, 255, 0.1); /* subtle hover effect */
+  border-radius: 6px; /* optional: makes hover feel like a button */
+  transition: background-color 0.25s ease;
+}
+
+/* Selected button in dark mode */
+.app-wrapper.dark .time-button.selected {
+  font-weight: 700;
+  background-color: rgba(255, 255, 255, 0.092); /* highlight selected */
+  border-radius: 6px;
+}
+
+
+/* Reset button */
+.reset-button {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  margin-top: 70px;
+  background-color: transparent;
+  color: inherit;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.3s ease;
+}
+
+/* Typing box */
+.typing-area-box {
+  background-color: transparent;
+  padding: 10px 8px;
+  max-width: 1200px;
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  scrollbar-width: none;
+  margin-top: 30px;
+  position: relative;
+}
+.typing-area-box::-webkit-scrollbar { display: none; }
+
+.typing-area {
+  font-size: 35px;
+  line-height: 3.4rem;
+  white-space: normal;
+  word-wrap: break-word;
+  cursor: text;
+  font-variant-ligatures: none;
+  user-select: none;
+  color: inherit;
+  text-align: justify;
+}
+
+.typing-word {
+  margin-right: 6px;
+  user-select: none;
+  position: relative;
+  white-space: normal;
+  display: inline;
+}
+
+.typing-char { position: relative; }
+
+.app-wrapper.dark .char-correct { color: #67d091; }
+.app-wrapper.dark .char-incorrect { color: #ec0a0a; }
+.app-wrapper.dark .char-default { color: #ddd; }
+
+.app-wrapper.light .char-correct { color: #4CAF50; }
+.app-wrapper.light .char-incorrect { color: #b20000; }
+.app-wrapper.light .char-default { color: #222; }
+
+.cursor {
+  display: inline-block;
+  position: absolute;
+  height: 1.6rem;
+  width: 2px;
+  background-color: #b02a2a;
+  position: absolute;
+  top: 3px;
+  height: 1.2em;
+  animation: blink 1s steps(2, start) infinite;
+  pointer-events: none;
+  transition: transform 0.15s ease;
+}
+
+.results-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 30, 0.9);
+  backdrop-filter: blur(10px);
+  color: #f1f1f1;
+  padding: 20px;
+  border-radius: 16px;
+  z-index: 200;
+  max-width: 900px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: popupFade 0.25s ease;
+  overflow: visible;
+}
+
+/* Results popup - Light mode */
+.app-wrapper.light .results-popup {
+  background: rgb(0, 0, 0);
+  border: 1px solid rgba(255, 255, 255, 0.433);
+  color: #ffffff; 
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Results popup - Dark mode */
+.app-wrapper.dark .results-popup {
+  background: rgb(0, 0, 0); /* dark frosted glass */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  color: #f1f1f1;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+@keyframes popupFade {
+  from { opacity: 0; transform: translate(-50%, -40%) scale(0.95); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: none;
+  cursor: pointer;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  transition: all 0.2s ease;
+  background-color: transparent;
+}
+
+.results-title {
+  text-align: center; 
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.close-btn:hover {
+  background: transparent;
+  transform: scale(1.5);
+}
+
+/* Graph */
+.results-graph {
+  width: 100%;
+  height: 250px;
+  background: rgba(0, 0, 0, 0.19);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.results-graph:hover {
+  background: rgb(0, 0, 0);
+  overflow: hidden;
+}
+
+.results-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 200px);
+  gap: 1rem;
+  justify-content: center; /* center the whole grid */
+}
+
+.results-stats div {
+  background: rgb(21, 21, 21);
+  border-radius: 25px;
+  padding: 15px 5px;
+  width: 180px;    
+  display: flex;
+  text-align: center;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+  transition: transform 0.3s ease, background 0.3s ease;
+  position: relative;
+  z-index: 0;
+}
+
+.results-stats div:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.1);
+  box-shadow: 0 0 0 1px #f0d8c9, 0 3px 8px rgba(0,0,0,0.25); /* optional highlight */
+  z-index: 5;  /* make it pop above neighbors */
+}
+
+.results-stats strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+  color: #ffda79;
+}
+
+.results-stats span {
+  font-size: 2.1rem;
+  font-weight: 600;
+  color: #ffffff;
+}
