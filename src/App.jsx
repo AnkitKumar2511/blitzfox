@@ -84,7 +84,7 @@ export default function App() {
         setErrorCount(errors);
 
         setHistoryWPM(prev => [...prev, net]);
-        setHighestWPM(prev => Math.max(prev, net));
+        setHighestWPM(prev => Math.max(prev, wpm));
         setLowestWPM(prev => Math.min(prev, net));
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
@@ -137,7 +137,7 @@ export default function App() {
   const getTypedCharsCount = () => {
     let count = 0;
     for (let i = 0; i < words.length; i++) {
-      if (i < currentWordIndex) count += words[i].length;
+      if (i < currentWordIndex) count += words[i].length + 1;
       else if (i === currentWordIndex) count += currentInput.length;
     }
     return count;
