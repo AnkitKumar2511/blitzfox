@@ -1,9 +1,10 @@
+/* ================= BLINKING CURSOR ================= */
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
 
-/* Background overlay container */
+/* ================= BACKGROUND OVERLAY ================= */
 .bg-blur {
   position: fixed;
   top: 0;
@@ -15,25 +16,25 @@
   overflow: hidden;
 }
 
-
-/* Light mode background */
+/* Light mode background image */
 .app-wrapper.light ~ .bg-blur { 
   background-image: url('/li.jpg'); 
-  background-size: cover;  /* or 'contain' depending on what you want */
+  background-size: cover;
   background-position: center; 
   background-repeat: no-repeat;
-  z-index: -1; /* stays behind your content */
+  z-index: -1;
 }
 
-/* Dark mode background */
+/* Dark mode background image */
 .app-wrapper.dark ~ .bg-blur { 
   background-image: url('/da.jpg'); 
-    background-size: cover;  /* or 'contain' depending on what you want */
+  background-size: cover;
   background-position: center; 
   background-repeat: no-repeat;
-  z-index: -1; /* stays behind your content */
+  z-index: -1;
 }
 
+/* ================= APP WRAPPER ================= */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -45,7 +46,8 @@ html, body, #root {
   outline: none;
 }
 
-.app-wrapper.dark, .app-wrapper.light {
+.app-wrapper.dark, 
+.app-wrapper.light {
   position: relative;
   z-index: 1;
   color: inherit;
@@ -60,7 +62,7 @@ html, body, #root {
 .app-wrapper.dark { color: white; }
 .app-wrapper.light { color: black; }
 
-/* Navbar */
+/* ================= NAVBAR ================= */
 .navbar {
   width: 100%;
   display: flex;
@@ -75,8 +77,13 @@ html, body, #root {
   z-index: 100;
 }
 
-.nav-left .nav-logo { height: 120px; width: auto; }
+/* Navbar logo */
+.nav-left .nav-logo { 
+  height: 120px; 
+  width: auto; 
+}
 
+/* Center nav links/buttons */
 .nav-center {
   position: absolute;
   left: 50%;
@@ -86,38 +93,60 @@ html, body, #root {
   align-items: center;
 }
 
-.nav-item {
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  border: none;
-  color: inherit;
-}
-
+/* Switch realm button */
 .switch-realm {
   padding: 6px 14px;
   border-radius: 6px;
   transition: background-color 0.3s ease;
 }
-.switch-realm:hover { background-color: rgba(128,128,128,0.2); }
+.switch-realm:hover { 
+  background-color: rgba(128,128,128,0.2); 
+}
 
-.nav-right { display: flex; align-items: center; margin-right: 55px; }
+/* Right side nav (Join button) */
+.nav-right { 
+  display: flex; 
+  align-items: center; 
+  margin-right: 55px; 
+}
 
+/* ================= NAVBAR BUTTONS (JOIN, SWITCH, TRACKS) ================= */
+.nav-item,
 .join-club {
   background-color: transparent;
+  border: 1px solid transparent;
   border: none;
   color: inherit;
   font-weight: 600;
   padding: 6px 14px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, transform 0.15s ease, border 0.3s ease;
 }
-.join-club:hover { background-color: rgba(128,128,128,0.2); border-radius: 6px; }
 
-/* Metrics box with glass effect */
+/* Light mode hover */
+.app-wrapper.light .nav-item:hover,
+.app-wrapper.light .join-club:hover {
+  background-color: #f0d8c944;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode hover */
+.app-wrapper.dark .nav-item:hover,
+.app-wrapper.dark .join-club:hover {
+  background-color: rgba(255, 255, 255, 0.08);   
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Click effect */
+.nav-item:active,
+.join-club:active {
+  transform: scale(0.95);
+}
+
+/* ================= METRICS BOX ================= */
 .metrics-box {
-  background: rgba(255, 255, 255, 0.08); /* transparent glass look */
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
@@ -137,17 +166,16 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Flip animation */
-.metrics-box.flipped {
-  transform: rotateX(180deg);
-}
+/* Flip animation for metrics box */
+.metrics-box.flipped { transform: rotateX(180deg); }
 
-/* Keep inside elements aligned when flipped */
+/* Flip correction for inner elements */
 .metrics-box.flipped .status-bar {
   transform: rotateX(180deg);
   transform-style: preserve-3d;
 }
 
+/* ================= LIQUID FILL EFFECT ================= */
 .liquid-fill {
   position: absolute;
   top: 0;
@@ -161,6 +189,7 @@ html, body, #root {
   transition-property: width;
 }
 
+/* Animated liquid fill */
 .liquid-fill.running {
   width: 100%;
   transition-timing-function: linear;
@@ -176,7 +205,7 @@ html, body, #root {
   background: linear-gradient(90deg, #004080 0%, #3399ff 100%);
 }
 
-/* Status bar */
+/* ================= STATUS BAR ================= */
 .status-bar {
   display: flex;
   gap: 4rem;
@@ -189,11 +218,13 @@ html, body, #root {
   outline: none;
 }
 
+/* Individual metric */
 .metric { display: flex; align-items: center; gap: 0.5rem; }
 .metric > span { font-size: 0.9rem; }
 .metric-icon { font-size: 0.9rem; color: currentColor; }
 .metric-value { display: inline-block; min-width: 4ch; text-align: right; }
 
+/* Separator bar between metrics */
 .metric-separator {
   width: 6px;
   height: 25px;
@@ -204,16 +235,21 @@ html, body, #root {
 }
 
 .app-wrapper.light .metric-separator {
-  background-color: #f0d8c9; /* darker separator for light mode */
+  background-color: #f0d8c9;
   border: 1px solid rgb(149, 110, 110);
 }
 
 .app-wrapper.dark .metric-separator {
-  background-color: rgba(255, 255, 255, 0.518); /* darker separator for light mode */
+  background-color: rgba(255, 255, 255, 0.518);
 }
 
+/* ================= TIME SELECTOR ================= */
+.time-selector { 
+  display: flex; 
+  gap: 15px; 
+  margin-left: 8px; 
+}
 
-.time-selector { display: flex; gap: 15px; margin-left: 8px; }
 .time-button {
   background-color: transparent;
   padding: 4px 12px;
@@ -223,43 +259,42 @@ html, body, #root {
   transition: background-color 0.25s ease;
   outline: none;
 }
-.time-button.selected { font-weight: 700; }
-.time-button:hover:not(.selected) { 
-  color: rgba(0,0,0,0.741); 
-}
 
-/* Light mode hover for time buttons */
+.time-button.selected { font-weight: 700; }
+.time-button:hover:not(.selected) { color: rgba(0,0,0,0.741); }
+
+/* Light mode time button hover */
 .app-wrapper.light .time-button:hover:not(.selected) {
-  color: #222222; /* dark text for visibility on light bg */
-  background-color: rgba(0, 0, 0, 0.08); /* subtle translucent overlay */
+  color: #222222;
+  background-color: rgba(0, 0, 0, 0.08);
   border-radius: 6px;
   transition: background-color 0.25s ease;
 }
 
-/* Selected button in light mode */
+/* Light mode selected time button */
 .app-wrapper.light .time-button.selected {
   font-weight: 700;
-  background-color: rgba(0, 0, 0, 0.12); /* slightly stronger highlight */
+  background-color: rgba(0, 0, 0, 0.12);
   border-radius: 6px;
 }
 
-/* Dark mode hover for time buttons */
+/* Dark mode time button hover */
 .app-wrapper.dark .time-button:hover:not(.selected) {
-  color: #ffffff; /* keep text white */
-  background-color: rgba(255, 255, 255, 0.1); /* subtle hover effect */
-  border-radius: 6px; /* optional: makes hover feel like a button */
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
   transition: background-color 0.25s ease;
 }
 
-/* Selected button in dark mode */
+/* Dark mode selected time button */
 .app-wrapper.dark .time-button.selected {
   font-weight: 700;
-  background-color: rgba(255, 255, 255, 0.092); /* highlight selected */
+  background-color: rgba(255, 255, 255, 0.092);
   border-radius: 6px;
 }
 
-
-/* Reset button */
+/* ================= RESET BUTTON ================= */
+/* ================= RESET BUTTON ================= */
 .reset-button {
   display: flex;
   align-items: center;
@@ -267,13 +302,69 @@ html, body, #root {
   margin-top: 70px;
   background-color: transparent;
   color: inherit;
-  border: none;
+  border: 1px solid transparent; /* reserve border space */
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.3s ease;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, transform 0.15s ease, border-color 0.3s ease;
+  position: relative; /* for tooltip */
 }
 
-/* Typing box */
+/* Light mode hover */
+.app-wrapper.light .reset-button:hover {
+  background-color: #f0d8c944;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode hover */
+.app-wrapper.dark .reset-button:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Click effect */
+.reset-button:active {
+  transform: scale(0.95);
+}
+
+/* Tooltip styling */
+.reset-button::after {
+  content: "Restart"; /* tooltip text */
+  position: absolute;
+  bottom: -32px; /* below the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+/* Tooltip appears on hover */
+.reset-button:hover::after {
+  opacity: 1;
+}
+
+/* Light mode tooltip */
+.app-wrapper.light .reset-button::after {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+}
+
+/* Dark mode tooltip */
+.app-wrapper.dark .reset-button::after {
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+}
+
+/* ================= TYPING AREA ================= */
 .typing-area-box {
   background-color: transparent;
   padding: 10px 8px;
@@ -309,21 +400,23 @@ html, body, #root {
 
 .typing-char { position: relative; }
 
+/* Character colors in dark mode */
 .app-wrapper.dark .char-correct { color: #67d091; }
 .app-wrapper.dark .char-incorrect { color: #ec0a0a; }
 .app-wrapper.dark .char-default { color: #ddd; }
 
+/* Character colors in light mode */
 .app-wrapper.light .char-correct { color: #4CAF50; }
 .app-wrapper.light .char-incorrect { color: #b20000; }
 .app-wrapper.light .char-default { color: #222; }
 
+/* Typing cursor */
 .cursor {
   display: inline-block;
   position: absolute;
   height: 1.6rem;
   width: 2px;
   background-color: #b02a2a;
-  position: absolute;
   top: 3px;
   height: 1.2em;
   animation: blink 1s steps(2, start) infinite;
@@ -331,6 +424,7 @@ html, body, #root {
   transition: transform 0.15s ease;
 }
 
+/* ================= RESULTS POPUP ================= */
 .results-popup {
   position: fixed;
   top: 50%;
@@ -353,7 +447,7 @@ html, body, #root {
   overflow: visible;
 }
 
-/* Results popup - Light mode */
+/* Light mode popup */
 .app-wrapper.light .results-popup {
   background: rgb(0, 0, 0);
   border: 1px solid rgba(255, 255, 255, 0.433);
@@ -361,9 +455,9 @@ html, body, #root {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
-/* Results popup - Dark mode */
+/* Dark mode popup */
 .app-wrapper.dark .results-popup {
-  background: rgb(0, 0, 0); /* dark frosted glass */
+  background: rgb(0, 0, 0);
   border: 1px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
@@ -371,24 +465,30 @@ html, body, #root {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
+/* Popup animation */
 @keyframes popupFade {
   from { opacity: 0; transform: translate(-50%, -40%) scale(0.95); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
+/* Close button for popup */
 .close-btn {
   position: absolute;
   top: 10px;
   right: 12px;
   border: none;
   cursor: pointer;
-  border: none;
   color: #fff;
   font-size: 1.3rem;
   transition: all 0.2s ease;
   background-color: transparent;
 }
+.close-btn:hover {
+  background: transparent;
+  transform: scale(1.5);
+}
 
+/* Popup title */
 .results-title {
   text-align: center; 
   margin: 0 0 1rem 0;
@@ -396,12 +496,7 @@ html, body, #root {
   font-weight: 700;
 }
 
-.close-btn:hover {
-  background: transparent;
-  transform: scale(1.5);
-}
-
-/* Graph */
+/* ================= RESULTS GRAPH ================= */
 .results-graph {
   width: 100%;
   height: 250px;
@@ -411,19 +506,20 @@ html, body, #root {
   justify-content: center;
   overflow: hidden;
 }
-
 .results-graph:hover {
   background: rgb(0, 0, 0);
   overflow: hidden;
 }
 
+/* ================= RESULTS STATS GRID ================= */
 .results-stats {
   display: grid;
   grid-template-columns: repeat(3, 200px);
   gap: 1rem;
-  justify-content: center; /* center the whole grid */
+  justify-content: center;
 }
 
+/* Individual stat card */
 .results-stats div {
   background: rgb(21, 21, 21);
   border-radius: 25px;
@@ -439,21 +535,20 @@ html, body, #root {
   position: relative;
   z-index: 0;
 }
-
 .results-stats div:hover {
   background: rgba(255, 255, 255, 0.08);
   transform: scale(1.1);
-  box-shadow: 0 0 0 1px #f0d8c9, 0 3px 8px rgba(0,0,0,0.25); /* optional highlight */
-  z-index: 5;  /* make it pop above neighbors */
+  box-shadow: 0 0 0 1px #f0d8c9, 0 3px 8px rgba(0,0,0,0.25);
+  z-index: 5;
 }
 
+/* Stat labels and values */
 .results-stats strong {
   display: block;
   font-size: 0.85rem;
   margin-bottom: 6px;
   color: #ffda79;
 }
-
 .results-stats span {
   font-size: 2.1rem;
   font-weight: 600;
