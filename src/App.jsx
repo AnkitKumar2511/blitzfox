@@ -163,7 +163,7 @@ export default function App() {
   function handleKeyDown(e) {
     if (timeLeft === 0) return;
 
-    if (["Shift", "Control", "Alt", "Meta", "Enter"].includes(e.key)) {
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") {
       return;
     }
 
