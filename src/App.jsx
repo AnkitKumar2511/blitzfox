@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import './App.css';
 import { FaClock, FaTachometerAlt, FaBullseye, FaRedo } from 'react-icons/fa';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { FaGoogle, FaGithub } from 'react-icons/fa';
 
 const WORDS_POOL = [
   "apple", "orange", "banana", "grape", "lemon", "mango",
@@ -31,6 +32,9 @@ export default function App() {
   const [liquidActive, setLiquidActive] = useState(false);
 
   const [showResults, setShowResults] = useState(false);
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true);
+
   const [historyWPM, setHistoryWPM] = useState([]);
   const [highestWPM, setHighestWPM] = useState(0);
   const [lowestWPM, setLowestWPM] = useState(Infinity);
@@ -84,7 +88,7 @@ export default function App() {
         setErrorCount(errors);
 
         setHistoryWPM(prev => [...prev, net]);
-        setHighestWPM(prev => Math.max(prev, wpm));
+        setHighestWPM(prev => Math.max(prev, net));
         setLowestWPM(prev => Math.min(prev, net));
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
@@ -109,7 +113,6 @@ export default function App() {
     if (containerRef.current) containerRef.current.focus();
   }, [currentWordIndex, isActive]);
 
-  // ✅ Scrolling effect
   useEffect(() => {
     const currentWordElement = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
     if (currentWordElement && typingBoxRef.current) {
@@ -159,7 +162,6 @@ export default function App() {
     return correct;
   };
 
-  // ✅ Key handling with line generation
   function handleKeyDown(e) {
     if (timeLeft === 0) return;
 
@@ -201,7 +203,6 @@ export default function App() {
         const currentEl = document.querySelector(`[data-word-index="${i}"]`);
         const nextEl = document.querySelector(`[data-word-index="${i + 1}"]`);
 
-        // ✅ Line-generation logic
         if (currentEl && nextEl && nextEl.offsetTop > currentEl.offsetTop) {
           const newLine = Array(10).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
           setWords(w => {
@@ -257,9 +258,61 @@ export default function App() {
             <span className="nav-item">Control Den</span>
           </div>
           <div className="nav-right">
-            <button className="join-club">Join the Club</button>
+            <button
+              className="join-club"
+              onClick={() => setShowAuthPopup(true)}
+            >
+              Join the Club
+            </button>
           </div>
         </nav>
+
+        {/* Auth Popup */}
+        {showAuthPopup && (
+          <div className="auth-popup">
+            <button
+              className="close-btn"
+              onClick={() => setShowAuthPopup(false)}
+            >
+              ✕
+            </button>
+
+            <h2 className="auth-title">{isLoginMode ? "Login" : "Sign Up"}</h2>
+
+            <div className="auth-fields">
+              <input type="text" placeholder="User ID" className="auth-input" />
+              <input type="password" placeholder="Password" className="auth-input" />
+            </div>
+
+            {/* Submit button */}
+            <button className="auth-submit">
+              {isLoginMode ? "Login" : "Sign Up"}
+            </button>
+
+            <div className="auth-social">
+              <button className="social-btn google">
+                <FaGoogle className="social-icon" />
+              </button>
+              <button className="social-btn github">
+                <FaGithub className="social-icon" />
+              </button>
+            </div>
+
+            <div className="auth-toggle">
+              {isLoginMode ? (
+                <span>
+                  Don't have an account?{" "}
+                  <button onClick={() => setIsLoginMode(false)}>Sign Up</button>
+                </span>
+              ) : (
+                <span>
+                  Have an account?{" "}
+                  <button onClick={() => setIsLoginMode(true)}>Login</button>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Metrics box */}
         <div
@@ -372,8 +425,6 @@ export default function App() {
 
             <h2 className="results-title">Test Results</h2>
 
-
-          {/* Graph */}
             <div className="results-graph">
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart
@@ -389,7 +440,6 @@ export default function App() {
               </ResponsiveContainer>
             </div>
 
-            {/* Stats Grid */}
             <div className="results-stats">
               <div>
                 <strong>WPM</strong>
@@ -434,6 +484,3 @@ export default function App() {
     </>
   );
 }
-
-
-

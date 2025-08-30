@@ -152,7 +152,6 @@ html, body, #root {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
-
   margin-top: 230px;
   margin-bottom: 3rem;
   max-width: 900px;
@@ -294,7 +293,6 @@ html, body, #root {
 }
 
 /* ================= RESET BUTTON ================= */
-/* ================= RESET BUTTON ================= */
 .reset-button {
   display: flex;
   align-items: center;
@@ -302,13 +300,13 @@ html, body, #root {
   margin-top: 70px;
   background-color: transparent;
   color: inherit;
-  border: 1px solid transparent; /* reserve border space */
+  border: 1px solid transparent;
   cursor: pointer;
   user-select: none;
   padding: 6px 14px;
   border-radius: 6px;
   transition: background-color 0.3s ease, transform 0.15s ease, border-color 0.3s ease;
-  position: relative; /* for tooltip */
+  position: relative;
 }
 
 /* Light mode hover */
@@ -330,9 +328,9 @@ html, body, #root {
 
 /* Tooltip styling */
 .reset-button::after {
-  content: "Restart"; /* tooltip text */
+  content: "Restart";
   position: absolute;
-  bottom: -32px; /* below the button */
+  bottom: -32px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0,0,0,0.8);
@@ -347,22 +345,12 @@ html, body, #root {
   z-index: 10;
 }
 
-/* Tooltip appears on hover */
-.reset-button:hover::after {
-  opacity: 1;
-}
+.reset-button:hover::after { opacity: 1; }
 
 /* Light mode tooltip */
-.app-wrapper.light .reset-button::after {
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
-}
-
+.app-wrapper.light .reset-button::after { background: rgba(0, 0, 0, 0.8); color: #fff; }
 /* Dark mode tooltip */
-.app-wrapper.dark .reset-button::after {
-  background: rgba(255, 255, 255, 0.9);
-  color: #000;
-}
+.app-wrapper.dark .reset-button::after { background: rgba(255, 255, 255, 0.9); color: #000; }
 
 /* ================= TYPING AREA ================= */
 .typing-area-box {
@@ -483,18 +471,10 @@ html, body, #root {
   transition: all 0.2s ease;
   background-color: transparent;
 }
-.close-btn:hover {
-  background: transparent;
-  transform: scale(1.5);
-}
+.close-btn:hover { transform: scale(1.5); }
 
 /* Popup title */
-.results-title {
-  text-align: center; 
-  margin: 0 0 1rem 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-}
+.results-title { text-align: center; margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 700; }
 
 /* ================= RESULTS GRAPH ================= */
 .results-graph {
@@ -506,10 +486,7 @@ html, body, #root {
   justify-content: center;
   overflow: hidden;
 }
-.results-graph:hover {
-  background: rgb(0, 0, 0);
-  overflow: hidden;
-}
+.results-graph:hover { background: rgb(0, 0, 0); overflow: hidden; }
 
 /* ================= RESULTS STATS GRID ================= */
 .results-stats {
@@ -554,3 +531,205 @@ html, body, #root {
   font-weight: 600;
   color: #ffffff;
 }
+
+/* ================= AUTH POPUP ================= */
+.auth-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.08); /* default dark mode bg */
+  border: 1px solid rgba(255, 255, 255, 0.700); /* default dark mode border */
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  padding: 30px 25px;
+  z-index: 300;
+  max-width: 400px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: popupFade 0.25s ease;
+  color: #fff;
+  transition: background 0.3s ease, border 0.3s ease, color 0.3s ease;
+}
+
+/* Light mode auth popup */
+.app-wrapper.light .auth-popup { 
+  background: rgba(255, 255, 255, 0.08); 
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  color: #000; 
+}
+
+/* Close button */
+.auth-popup .close-btn { 
+  top: 12px; 
+  right: 12px; 
+  color: inherit; 
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.auth-popup .close-btn:hover { transform: scale(1.4); }
+.auth-popup .close-btn:active { transform: scale(0.95); }
+
+/* Popup title */
+.auth-title { 
+  font-size: 1.7rem; 
+  text-align: center; 
+  font-weight: 700; 
+  margin: 0; 
+}
+
+/* Input fields */
+.auth-fields { display: flex; flex-direction: column; gap: 12px; }
+.auth-input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.700);
+  font-size: 1rem;
+  outline: none;
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  transition: background 0.3s, border 0.3s;
+}
+.app-wrapper.light .auth-input { 
+  background: rgba(255, 255, 255, 0.08); 
+  border: 1px solid rgba(0, 0, 0, 0.5); 
+  color: #000; 
+}
+.auth-input:focus { border-color: #66aaff; }
+
+/* Submit button */
+.auth-submit {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.700);
+  background-color: rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.3s ease, border 0.3s ease;
+  color: inherit;
+}
+.auth-submit:hover { 
+  transform: scale(0.97); 
+  background-color: rgba(8, 8, 8, 0.303); 
+}
+.auth-submit:active {
+  background-color: rgb(0, 0, 0);
+  transform: scale(0.95);
+}
+.app-wrapper.light .auth-submit { 
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #000;
+}
+.app-wrapper.light .auth-submit:hover { 
+  background-color: rgba(255, 255, 255, 0.271); 
+}
+.app-wrapper.light .auth-submit:active { 
+  background-color: rgba(255, 255, 255, 0.596); 
+}
+
+/* Social Buttons */
+.auth-social {
+  display: flex;
+  gap: 21px; 
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px; 
+  padding: 8px 12px;
+  border-radius: 8px; 
+  border: 1px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.2s, border 0.2s, color 0.2s;
+  color: inherit;
+}
+.social-btn .social-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 4px; 
+}
+
+/* Specific colors for each service */
+.social-btn.google {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #4285F4;
+}
+.social-btn.github {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+/* Light mode overrides */
+.app-wrapper.light .social-btn {
+  border: 1px solid #000;
+  color: #000;
+}
+
+/* Dark mode overrides */
+.app-wrapper.dark .social-btn {
+  border: 1px solid #ffffff84;
+  color: #fff;
+}
+
+/* Hover and click effects (unchanged) */
+.social-btn:hover { 
+  transform: translateY(-2px); 
+  background-color: rgba(255, 255, 255, 0.15); 
+  border-color: rgba(255, 255, 255, 0.5);
+}
+.social-btn:active { 
+  transform: translateY(0); 
+  background-color: rgba(255, 255, 255, 0.2); 
+}
+
+/* Animation for popup fade */
+@keyframes popupFade {
+  0% { opacity: 0; transform: translate(-50%, -55%); }
+  100% { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+/* ================= AUTH TOGGLE BUTTONS ================= */
+.auth-toggle {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: inherit;
+}
+
+/* Login/Signup buttons inside toggle */
+.auth-toggle button {
+  padding: 6px 12px;
+  margin-left: 5px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.15s ease, border 0.25s ease, color 0.25s ease;
+}
+
+/* Light mode styling */
+.app-wrapper.light .auth-toggle button {
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  color: #000;
+}
+.app-wrapper.light .auth-toggle button:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(0.97); }
+.app-wrapper.light .auth-toggle button:active { background-color: rgba(0, 0, 0, 0.15); transform: scale(0.95); }
+
+/* Dark mode styling */
+.app-wrapper.dark .auth-toggle button {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.686);
+  color: #fff;
+}
+.app-wrapper.dark .auth-toggle button:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(0.97); }
+.app-wrapper.dark .auth-toggle button:active { background-color: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
