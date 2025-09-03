@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import './App.css';
-import { FaClock, FaTachometerAlt, FaBullseye, FaRedo } from 'react-icons/fa';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { FaGoogle, FaGithub } from 'react-icons/fa';
+import Navbar from "./components/Navbar/Navbar";
+import MetricsBox from "./components/MetricsBox/MetricsBox";
+import TypingArea from "./components/TypingArea/TypingArea";
+import ResultsPopup from "./components/ResultsPopup/ResultsPopup";
+import AuthPopup from "./components/AuthPopup/AuthPopup";
+import ResetButton from "./components/ResetButton/ResetButton";
 
 const WORDS_POOL = [
   "apple", "orange", "banana", "grape", "lemon", "mango",
@@ -11,10 +14,8 @@ const WORDS_POOL = [
   "garden", "flower", "green", "plant", "leaf", "root", "bloom", "vine"
 ];
 
-const generateWordsArray = (num = 30) =>
+const generateWordsArray = (num = 40) =>
   Array(num).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
-
-const TIME_OPTIONS = [15, 30, 60, 120];
 
 export default function App() {
   const [testDuration, setTestDuration] = useState(30);
@@ -22,7 +23,7 @@ export default function App() {
   const [currentInput, setCurrentInput] = useState("");
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [charResults, setCharResults] = useState(
-    Array(30).fill(null).map(() => [])
+    Array(40).fill(null).map(() => [])
   );
   const [timeLeft, setTimeLeft] = useState(testDuration);
   const [isActive, setIsActive] = useState(false);
@@ -33,7 +34,6 @@ export default function App() {
 
   const [showResults, setShowResults] = useState(false);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(true);
 
   const [historyWPM, setHistoryWPM] = useState([]);
   const [highestWPM, setHighestWPM] = useState(0);
@@ -63,12 +63,16 @@ export default function App() {
     setRawWPM(0);
     setErrorCount(0);
 
+    if(typingBoxRef.current) {
+        typingBoxRef.current.scrollTop = 0;
+    }
+
     if (containerRef.current) {
       containerRef.current.focus();
     }
   };
 
-  // Timer and live metrics
+  // UPDATED: This effect now ONLY handles the timer and live metrics
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
@@ -91,13 +95,17 @@ export default function App() {
         setHighestWPM(prev => Math.max(prev, net));
         setLowestWPM(prev => Math.min(prev, net));
       }, 1000);
-    } else if (timeLeft === 0 && isActive) {
+    }
+    return () => clearInterval(interval);
+  }, [isActive, timeLeft, testDuration]);
+
+  // UPDATED: This new effect instantly handles the end of the test
+  useEffect(() => {
+    if (timeLeft === 0 && isActive) {
       setIsActive(false);
       setShowResults(true);
     }
-
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
+  }, [timeLeft, isActive]);
 
   useEffect(() => {
     if (isActive) {
@@ -108,19 +116,22 @@ export default function App() {
       setLiquidActive(false);
     }
   }, [isActive, timeLeft]);
-
+  
   useEffect(() => {
-    if (containerRef.current) containerRef.current.focus();
-  }, [currentWordIndex, isActive]);
+    if (typingBoxRef.current && currentWordIndex > 0) {
+      const currentWordEl = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
+      const prevWordEl = document.querySelector(`[data-word-index="${currentWordIndex - 1}"]`);
+      
+      if (currentWordEl && prevWordEl && currentWordEl.offsetTop > prevWordEl.offsetTop) {
+        typingBoxRef.current.scrollTop = currentWordEl.offsetTop;
 
-  useEffect(() => {
-    const currentWordElement = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
-    if (currentWordElement && typingBoxRef.current) {
-      currentWordElement.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-        inline: "nearest"
-      });
+        const newLine = Array(20).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
+        setWords(w => {
+            const newWords = [...w, ...newLine];
+            setCharResults(cr => [...cr, ...newLine.map(() => [])]);
+            return newWords;
+        });
+      }
     }
   }, [currentWordIndex]);
 
@@ -135,32 +146,31 @@ export default function App() {
     return () => {
       window.removeEventListener("keydown", handleShiftEnter);
     };
-  }, [testDuration]);
+  }, [testDuration, resetTest]);
 
   const getTypedCharsCount = () => {
     let count = 0;
-    for (let i = 0; i < words.length; i++) {
-      if (i < currentWordIndex) count += words[i].length + 1;
-      else if (i === currentWordIndex) count += currentInput.length;
+    for (let i = 0; i < currentWordIndex; i++) {
+        count += words[i].length + 1;
     }
+    count += currentInput.length;
     return count;
   };
-
+  
   const getCorrectCharsCount = () => {
     let correct = 0;
-    for (let i = 0; i < words.length; i++) {
-      const typedChars = i === currentWordIndex ? currentInput.split("") : [];
-      const expectedChars = words[i].split("");
-      const results = charResults[i] || [];
-      const length = i === currentWordIndex ? typedChars.length : expectedChars.length;
-      for (let j = 0; j < length; j++) {
-        if (i === currentWordIndex) {
-          if (typedChars[j] && typedChars[j] === expectedChars[j]) correct++;
-        } else if (results[j]) correct++;
-      }
+    for (let i = 0; i < currentWordIndex; i++) {
+        const resultForWordAndSpace = charResults[i] || [];
+        correct += resultForWordAndSpace.filter(r => r === true).length;
+    }
+    const currentExpected = words[currentWordIndex] + ' ';
+    for(let i = 0; i < currentInput.length; i++) {
+        if(currentInput[i] === currentExpected[i]) {
+            correct++;
+        }
     }
     return correct;
-  };
+  };  
 
   function handleKeyDown(e) {
     if (timeLeft === 0) return;
@@ -168,60 +178,57 @@ export default function App() {
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") {
       return;
     }
+    
+    if (document.activeElement !== containerRef.current) {
+        containerRef.current.focus();
+    }
 
     if (!isActive) setIsActive(true);
 
+    const currentWord = words[currentWordIndex];
+
     if (e.key === "Backspace") {
       e.preventDefault();
-      if (currentInput.length > 0) setCurrentInput(currentInput.slice(0, -1));
-      else if (currentWordIndex > 0) {
+      if (currentInput.length > 0) {
+        setCurrentInput(currentInput.slice(0, -1));
+      } else if (currentWordIndex > 0) {
         setCurrentWordIndex(currentWordIndex - 1);
-        setCurrentInput(words[currentWordIndex - 1]);
-        setCharResults(cr => {
-          const newCr = [...cr];
-          newCr[currentWordIndex] = [];
-          return newCr;
-        });
       }
       return;
     }
 
     if (e.key === " ") {
       e.preventDefault();
-      const expected = words[currentWordIndex];
-      const typed = currentInput;
-      const results = [];
-      for (let i = 0; i < expected.length; i++) results.push(typed[i] === expected[i]);
+      
+      if (currentInput === "") return;
+      
+      const expectedWithSpace = currentWord + ' ';
+      const results = expectedWithSpace.split('').map((char, i) => {
+        if (i < currentInput.length) {
+            return currentInput[i] === char;
+        }
+        if (i === currentWord.length) {
+            return currentInput.length === currentWord.length;
+        }
+        return false;
+      });
+
       setCharResults(cr => {
         const newCr = [...cr];
         newCr[currentWordIndex] = results;
         return newCr;
       });
 
-      setCurrentWordIndex(i => {
-        const nextIndex = Math.min(i + 1, words.length - 1);
-        const currentEl = document.querySelector(`[data-word-index="${i}"]`);
-        const nextEl = document.querySelector(`[data-word-index="${i + 1}"]`);
-
-        if (currentEl && nextEl && nextEl.offsetTop > currentEl.offsetTop) {
-          const newLine = Array(10).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
-          setWords(w => {
-            const newWords = [...w, ...newLine];
-            setCharResults(cr => [...cr, ...newLine.map(() => [])]);
-            return newWords;
-          });
-        }
-
-        return nextIndex;
-      });
-
+      setCurrentWordIndex(i => i + 1);
       setCurrentInput("");
       return;
     }
 
     if (/^[a-zA-Z]$/.test(e.key)) {
       e.preventDefault();
-      setCurrentInput(c => c + e.key.toLowerCase());
+      if (currentInput.length < currentWord.length) {
+        setCurrentInput(c => c + e.key.toLowerCase());
+      }
     }
   }
 
@@ -229,255 +236,60 @@ export default function App() {
   const correctChars = getCorrectCharsCount();
   const elapsedMin = (testDuration - timeLeft) / 60;
   const wpm = elapsedMin > 0 ? (correctChars / 5) / elapsedMin : 0;
-  const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : null;
+  const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : 0;
 
   return (
     <>
-      <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
-        {/* Navbar */}
-        <nav className="navbar">
-          <div className="nav-left">
-            <img
-              src={isDarkMode ? "/2.png" : "/1.png"}
-              alt="Logo"
-              className="nav-logo"
-            />
-          </div>
-          <div className="nav-center">
-            <span className="nav-item">Tracks</span>
-            <button
-              className="nav-item switch-realm"
-              onClick={() => {
-                setIsDarkMode(!isDarkMode);
-                resetTest(testDuration);
-              }}
-              aria-label="Toggle dark/light mode"
-            >
-              Switch Realm
-            </button>
-            <span className="nav-item">Control Den</span>
-          </div>
-          <div className="nav-right">
-            <button
-              className="join-club"
-              onClick={() => setShowAuthPopup(true)}
-            >
-              Join the Club
-            </button>
-          </div>
-        </nav>
+      <div 
+        className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} 
+        onKeyDown={handleKeyDown} 
+        tabIndex={0} 
+        ref={containerRef}
+      >
+        <Navbar 
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          resetTest={resetTest}
+          setShowAuthPopup={setShowAuthPopup}
+        />
 
-        {/* Auth Popup */}
-        {showAuthPopup && (
-          <div className="auth-popup">
-            <button
-              className="close-btn"
-              onClick={() => setShowAuthPopup(false)}
-            >
-              ✕
-            </button>
+        {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} />}
 
-            <h2 className="auth-title">{isLoginMode ? "Login" : "Sign Up"}</h2>
-
-            <div className="auth-fields">
-              <input type="text" placeholder="User ID" className="auth-input" />
-              <input type="password" placeholder="Password" className="auth-input" />
-            </div>
-
-            {/* Submit button */}
-            <button className="auth-submit">
-              {isLoginMode ? "Login" : "Sign Up"}
-            </button>
-
-            <div className="auth-social">
-              <button className="social-btn google">
-                <FaGoogle className="social-icon" />
-              </button>
-              <button className="social-btn github">
-                <FaGithub className="social-icon" />
-              </button>
-            </div>
-
-            <div className="auth-toggle">
-              {isLoginMode ? (
-                <span>
-                  Don't have an account?{" "}
-                  <button onClick={() => setIsLoginMode(false)}>Sign Up</button>
-                </span>
-              ) : (
-                <span>
-                  Have an account?{" "}
-                  <button onClick={() => setIsLoginMode(true)}>Login</button>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Metrics box */}
-        <div
-          className={`metrics-box ${metricsBoxFlipped ? "flipped" : ""}`}
-          aria-label="Typing test metrics"
-        >
-          <div
-            className={`liquid-fill ${liquidActive ? "running" : ""}`}
-            style={{ transitionDuration: liquidActive ? `${testDuration}s` : "0s" }}
-          ></div>
-          
-          <div
-            className="status-bar"
-            tabIndex={0}
-            ref={containerRef}
-            onKeyDown={handleKeyDown}
-          >
-            <div className="metric">
-              <FaClock className="metric-icon" />
-              <span>time:</span>
-              <div className="time-selector">
-                {TIME_OPTIONS.map(option => (
-                  <button
-                    key={option}
-                    className={`time-button ${testDuration === option ? 'selected' : ''}`}
-                    onClick={() => resetTest(option)}
-                    aria-label={`Set time to ${option} seconds`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <span className="metric-separator" aria-hidden="true" />
-
-            <div className="metric">
-              <FaTachometerAlt className="metric-icon" />
-              <span>wpm:</span>
-              <span className="metric-value">{wpm.toFixed(0)}</span>
-            </div>
-
-            <span className="metric-separator" aria-hidden="true" />
-
-            <div className="metric">
-              <FaBullseye className="metric-icon" />
-              <span>accuracy:</span>
-              <span className="metric-value">
-                {accuracy === null ? "-" : `${accuracy.toFixed(0)}%`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Typing area */}
-        <div className="typing-area-box" ref={typingBoxRef}>
-          <div className="typing-area" aria-label="Typing words">
-            {words.map((word, i) => {
-              const expectedChars = word.split("");
-              const typedChars = i === currentWordIndex ? currentInput.split("") : [];
-              const charStatus = charResults[i] || [];
-
-              return (
-                <span
-                  key={i}
-                  data-word-index={i}
-                  className="typing-word"
-                  aria-current={i === currentWordIndex ? "true" : "false"}
-                >
-                  {expectedChars.map((char, idx) => {
-                    let colorClass = "char-default";
-                    if (i === currentWordIndex) {
-                      if (typedChars[idx] == null) colorClass = "char-default";
-                      else colorClass = typedChars[idx] === char ? "char-correct" : "char-incorrect";
-                    } else if (i < currentWordIndex) {
-                      colorClass = charStatus[idx] ? "char-correct" : "char-incorrect";
-                    }
-                    const showCursor = i === currentWordIndex && idx === typedChars.length && timeLeft > 0;
-
-                    return (
-                      <React.Fragment key={idx}>
-                        {showCursor && (
-                          <span className="cursor" style={{ left: `calc(${idx}ch)` }} />
-                        )}
-                        <span className={`typing-char ${colorClass}`}>{char}</span>
-                      </React.Fragment>
-                    );
-                  })}
-                  {i === currentWordIndex && typedChars.length === 0 && timeLeft > 0 && (
-                    <span className="cursor" style={{ left: 0 }} />
-                  )}
-                  <span> </span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
+        <MetricsBox
+          metricsBoxFlipped={metricsBoxFlipped}
+          liquidActive={liquidActive}
+          testDuration={testDuration}
+          resetTest={resetTest}
+          wpm={wpm}
+          accuracy={accuracy}
+        />
         
+        <TypingArea
+          typingBoxRef={typingBoxRef}
+          words={words}
+          currentWordIndex={currentWordIndex}
+          currentInput={currentInput}
+          charResults={charResults}
+          timeLeft={timeLeft}
+          isActive={isActive}
+        />
+
         {showResults && (
-          <div className="results-popup">
-            <button
-              className="close-btn"
-              onClick={() => {
-                setShowResults(false);
-                resetTest(testDuration);
-              }}
-            >
-              ✕
-            </button>
-
-            <h2 className="results-title">Test Results</h2>
-
-            <div className="results-graph">
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart
-                  data={historyWPM.map((val, i) => ({ time: i, wpm: val }))}
-                  margin={{ top: 20, right: 30, left: 30, bottom: 30 }}
-                >
-                  <CartesianGrid stroke="#ccc" />
-                  <XAxis dataKey="time" label={{ value: "Time (s)", position: "insideBottom", offset: -5 }} />
-                  <YAxis label={{ value: "WPM", angle: -90, position: "insideLeft" }} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="wpm" stroke="#8884d8" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="results-stats">
-              <div>
-                <strong>WPM</strong>
-                <span>{wpm.toFixed(0)}</span>
-              </div>
-              <div>
-                <strong>Accuracy</strong>
-                <span>{accuracy.toFixed(0)}%</span>
-              </div>
-              <div>
-                <strong>Raw WPM</strong>
-                <span>{rawWPM.toFixed(0)}</span>
-              </div>
-              <div>
-                <strong>Highest WPM</strong>
-                <span>{highestWPM.toFixed(0)}</span>
-              </div>
-              <div>
-                <strong>Lowest WPM</strong>
-                <span>{lowestWPM.toFixed(0)}</span>
-              </div>
-              <div>
-                <strong>Errors</strong>
-                <span>{errorCount}</span>
-              </div>
-            </div>
-          </div>
+          <ResultsPopup
+            setShowResults={setShowResults}
+            resetTest={resetTest}
+            testDuration={testDuration}
+            historyWPM={historyWPM}
+            wpm={wpm}
+            accuracy={accuracy}
+            rawWPM={rawWPM}
+            highestWPM={highestWPM}
+            lowestWPM={lowestWPM}
+            errorCount={errorCount}
+          />
         )}
 
-        <div>
-          <button
-            className="reset-button"
-            onClick={() => resetTest(testDuration)}
-            aria-label="Reset typing test"
-          >
-            <FaRedo />
-          </button>
-        </div>
+        <ResetButton resetTest={() => resetTest(testDuration)} />
       </div>
 
       <div className="bg-blur"></div>

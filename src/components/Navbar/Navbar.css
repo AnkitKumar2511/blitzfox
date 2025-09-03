@@ -1,0 +1,74 @@
+/* ================= NAVBAR ================= */
+.navbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 70px;
+  padding: 0px 40px;
+  background: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
+.nav-left .nav-logo { 
+  height: 120px; 
+  width: auto; 
+}
+
+.nav-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.switch-realm {
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.switch-realm:hover { 
+  background-color: rgba(128,128,128,0.2); 
+}
+
+.nav-right { 
+  display: flex; 
+  align-items: center; 
+  margin-right: 55px; 
+}
+
+.nav-item,
+.join-club {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border: none;
+  color: inherit;
+  font-weight: 600;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, transform 0.15s ease, border 0.3s ease;
+}
+
+.app-wrapper.light .nav-item:hover,
+.app-wrapper.light .join-club:hover {
+  background-color: #f0d8c944;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+.app-wrapper.dark .nav-item:hover,
+.app-wrapper.dark .join-club:hover {
+  background-color: rgba(255, 255, 255, 0.08);   
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.nav-item:active,
+.join-club:active {
+  transform: scale(0.95);
+}

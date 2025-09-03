@@ -1,0 +1,85 @@
+/* Tracks page styles - minimal and self-contained */
+.tracks-page {
+  position: fixed;
+  top: 72px; /* below navbar - adjust if your navbar height differs */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, 96%);
+  max-height: calc(100vh - 120px);
+  background: var(--panel-bg, rgba(255,255,255,0.95));
+  color: inherit;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  padding: 16px;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* header */
+.tracks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* table wrapper with vertical scroll */
+.tracks-table-wrapper {
+  overflow-y: auto;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0;
+  max-height: calc(100vh - 220px);
+  box-shadow: none;
+}
+
+/* table */
+.tracks-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px; /* allow horizontal scroll on small screens */
+}
+
+.tracks-table thead th {
+  position: sticky;
+  top: 0;
+  background: rgba(0,0,0,0.03);
+  padding: 10px;
+  text-align: left;
+  font-size: 0.95rem;
+  z-index: 2;
+}
+
+.tracks-table tbody td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 0.92rem;
+}
+
+/* small in-progress pill */
+.in-progress-pill {
+  font-size: 0.8rem;
+  color: #0a66c2;
+  margin-left: 6px;
+}
+
+/* highlight in-progress rows */
+.in-progress-row {
+  background: rgba(255, 245, 200, 0.6);
+}
+
+/* actions */
+.tracks-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* reuse your .reset-button styling expectation */
+.reset-button {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}

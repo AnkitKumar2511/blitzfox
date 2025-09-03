@@ -1,0 +1,53 @@
+/* ================= RESET BUTTON ================= */
+.reset-button {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  margin-top: 70px;
+  background-color: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease, transform 0.15s ease, border-color 0.3s ease;
+  position: relative;
+}
+
+.app-wrapper.light .reset-button:hover {
+  background-color: #f0d8c944;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.app-wrapper.dark .reset-button:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.reset-button:active {
+  transform: scale(0.95);
+}
+
+.reset-button::after {
+  content: "Restart";
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.reset-button:hover::after { opacity: 1; }
+
+.app-wrapper.light .reset-button::after { background: rgba(0, 0, 0, 0.8); color: #fff; }
+.app-wrapper.dark .reset-button::after { background: rgba(255, 255, 255, 0.9); color: #000; }
