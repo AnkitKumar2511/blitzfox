@@ -7,7 +7,7 @@ export default function Tracks({ tracks, onCloseTracks, onClearAll }) {
       <div className="tracks-header">
         <h2>Tracks</h2>
         <div>
-          <button className="close-btn" onClick={onCloseTracks}>✕</button>
+          <button className="back-btn" onClick={onCloseTracks}>Back</button>
         </div>
       </div>
 
@@ -16,7 +16,7 @@ export default function Tracks({ tracks, onCloseTracks, onClearAll }) {
           <thead>
             <tr>
               <th>Test No.</th>
-              <th>Time and Date</th>
+              <th>Date and Time</th>
               <th>WPM</th>
               <th>Accuracy</th>
               <th>Errors</th>
@@ -56,7 +56,7 @@ export default function Tracks({ tracks, onCloseTracks, onClearAll }) {
       </div>
 
       <div className="tracks-actions">
-        <button className="reset-button" onClick={onClearAll}>Clear All</button>
+        <button className="clear-btn" onClick={onClearAll}>Clear All</button>
       </div>
     </div>
   );

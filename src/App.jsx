@@ -6,6 +6,7 @@ import TypingArea from "./components/TypingArea/TypingArea";
 import ResultsPopup from "./components/ResultsPopup/ResultsPopup";
 import AuthPopup from "./components/AuthPopup/AuthPopup";
 import ResetButton from "./components/ResetButton/ResetButton";
+import Tracks from "./components/Tracks/Tracks";
 
 const WORDS_POOL = [
   "apple", "orange", "banana", "grape", "lemon", "mango",
@@ -41,6 +42,9 @@ export default function App() {
   const [rawWPM, setRawWPM] = useState(0);
   const [errorCount, setErrorCount] = useState(0);
 
+  const [tracks, setTracks] = useState([]);
+  const [page, setPage] = useState('home'); // 'home' or 'tracks'
+
   const containerRef = useRef(null);
   const typingBoxRef = useRef(null);
 
@@ -72,7 +76,6 @@ export default function App() {
     }
   };
 
-  // UPDATED: This effect now ONLY handles the timer and live metrics
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
@@ -99,11 +102,33 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isActive, timeLeft, testDuration]);
 
-  // UPDATED: This new effect instantly handles the end of the test
   useEffect(() => {
     if (timeLeft === 0 && isActive) {
       setIsActive(false);
       setShowResults(true);
+
+      // Save test to history
+      const typedCharsCount = getTypedCharsCount();
+      const correctCharsCount = getCorrectCharsCount();
+      const elapsed = testDuration;
+      const elapsedMin = elapsed / 60;
+      const wpm = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
+      const accuracy = typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
+
+      setTracks(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          dateTimeDisplay: new Date().toLocaleString('en-IN'),
+          wpm,
+          accuracy,
+          errors: errorCount,
+          rawWpm: rawWPM,
+          highestWpm: highestWPM,
+          lowestWpm: lowestWPM,
+          testDuration,
+        }
+      ]);
     }
   }, [timeLeft, isActive]);
 
@@ -238,59 +263,87 @@ export default function App() {
   const wpm = elapsedMin > 0 ? (correctChars / 5) / elapsedMin : 0;
   const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : 0;
 
+  // Handlers for Tracks page navigation
+  const handleShowTracks = () => setPage('tracks');
+  const handleGoHome = () => setPage('home');
+  const handleCloseTracks = () => setPage('home');
+  const handleClearTracks = () => setTracks([]);
+
   return (
     <>
-      <div 
-        className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} 
-        onKeyDown={handleKeyDown} 
-        tabIndex={0} 
-        ref={containerRef}
-      >
-        <Navbar 
-          isDarkMode={isDarkMode}
-          setIsDarkMode={setIsDarkMode}
-          resetTest={resetTest}
-          setShowAuthPopup={setShowAuthPopup}
-        />
-
-        {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} />}
-
-        <MetricsBox
-          metricsBoxFlipped={metricsBoxFlipped}
-          liquidActive={liquidActive}
-          testDuration={testDuration}
-          resetTest={resetTest}
-          wpm={wpm}
-          accuracy={accuracy}
-        />
-        
-        <TypingArea
-          typingBoxRef={typingBoxRef}
-          words={words}
-          currentWordIndex={currentWordIndex}
-          currentInput={currentInput}
-          charResults={charResults}
-          timeLeft={timeLeft}
-          isActive={isActive}
-        />
-
-        {showResults && (
-          <ResultsPopup
-            setShowResults={setShowResults}
+      {page === 'home' && (
+        <div 
+          className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} 
+          onKeyDown={handleKeyDown} 
+          tabIndex={0} 
+          ref={containerRef}
+        >
+          <Navbar 
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={handleShowTracks} // showTracks navigates to tracks page
+            goHome={handleGoHome}          // goHome prop to navigate home on logo click
+          />
+
+          {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} />}
+
+          <MetricsBox
+            metricsBoxFlipped={metricsBoxFlipped}
+            liquidActive={liquidActive}
             testDuration={testDuration}
-            historyWPM={historyWPM}
+            resetTest={resetTest}
             wpm={wpm}
             accuracy={accuracy}
-            rawWPM={rawWPM}
-            highestWPM={highestWPM}
-            lowestWPM={lowestWPM}
-            errorCount={errorCount}
           />
-        )}
+          
+          <TypingArea
+            typingBoxRef={typingBoxRef}
+            words={words}
+            currentWordIndex={currentWordIndex}
+            currentInput={currentInput}
+            charResults={charResults}
+            timeLeft={timeLeft}
+            isActive={isActive}
+          />
 
-        <ResetButton resetTest={() => resetTest(testDuration)} />
-      </div>
+          {showResults && (
+            <ResultsPopup
+              setShowResults={setShowResults}
+              resetTest={resetTest}
+              testDuration={testDuration}
+              historyWPM={historyWPM}
+              wpm={wpm}
+              accuracy={accuracy}
+              rawWPM={rawWPM}
+              highestWPM={highestWPM}
+              lowestWPM={lowestWPM}
+              errorCount={errorCount}
+            />
+          )}
+
+          <ResetButton resetTest={() => resetTest(testDuration)} />
+        </div>
+      )}
+
+      {page === 'tracks' && (
+        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
+          <Navbar 
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={null} // disable Tracks button here to avoid loops
+            goHome={handleGoHome} // allow home navigation from tracks page logo click
+          />
+          <Tracks
+            tracks={tracks}
+            onCloseTracks={handleCloseTracks}
+            onClearAll={handleClearTracks}
+          />
+        </div>
+      )}
 
       <div className="bg-blur"></div>
     </>
