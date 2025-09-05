@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { FaGoogle, FaGithub } from 'react-icons/fa';
 import './AuthPopup.css';
 
-const AuthPopup = ({ setShowAuthPopup }) => {
+const AuthPopup = ({ setShowAuthPopup, isDarkMode }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
 
+  // Apply 'dark' or 'light' class based on the prop
+  const themeClass = isDarkMode ? 'dark' : 'light';
+
   return (
-    <div className="auth-popup">
+    <div className={`auth-popup ${themeClass}`}>
       <button
         className="close-btn"
         onClick={() => setShowAuthPopup(false)}

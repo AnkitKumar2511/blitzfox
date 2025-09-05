@@ -7,6 +7,7 @@ import ResultsPopup from "./components/ResultsPopup/ResultsPopup";
 import AuthPopup from "./components/AuthPopup/AuthPopup";
 import ResetButton from "./components/ResetButton/ResetButton";
 import Tracks from "./components/Tracks/Tracks";
+import ControlDen from "./components/ControlDen/ControlDen";
 
 const WORDS_POOL = [
   "apple", "orange", "banana", "grape", "lemon", "mango",
@@ -43,7 +44,7 @@ export default function App() {
   const [errorCount, setErrorCount] = useState(0);
 
   const [tracks, setTracks] = useState([]);
-  const [page, setPage] = useState('home'); // 'home' or 'tracks'
+  const [page, setPage] = useState('home');
 
   const containerRef = useRef(null);
   const typingBoxRef = useRef(null);
@@ -107,7 +108,6 @@ export default function App() {
       setIsActive(false);
       setShowResults(true);
 
-      // Save test to history
       const typedCharsCount = getTypedCharsCount();
       const correctCharsCount = getCorrectCharsCount();
       const elapsed = testDuration;
@@ -263,11 +263,12 @@ export default function App() {
   const wpm = elapsedMin > 0 ? (correctChars / 5) / elapsedMin : 0;
   const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : 0;
 
-  // Handlers for Tracks page navigation
+  // Navigation handlers
   const handleShowTracks = () => setPage('tracks');
   const handleGoHome = () => setPage('home');
   const handleCloseTracks = () => setPage('home');
   const handleClearTracks = () => setTracks([]);
+  const handleShowControlDen = () => setPage('controlDen');
 
   return (
     <>
@@ -283,11 +284,10 @@ export default function App() {
             setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
             setShowAuthPopup={setShowAuthPopup}
-            showTracks={handleShowTracks} // showTracks navigates to tracks page
-            goHome={handleGoHome}          // goHome prop to navigate home on logo click
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
           />
-
-          {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} />}
 
           <MetricsBox
             metricsBoxFlipped={metricsBoxFlipped}
@@ -334,8 +334,9 @@ export default function App() {
             setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
             setShowAuthPopup={setShowAuthPopup}
-            showTracks={null} // disable Tracks button here to avoid loops
-            goHome={handleGoHome} // allow home navigation from tracks page logo click
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
           />
           <Tracks
             tracks={tracks}
@@ -344,6 +345,24 @@ export default function App() {
           />
         </div>
       )}
+
+      {page === 'controlDen' && (
+        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
+          <Navbar 
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
+          />
+          <ControlDen isDarkMode={isDarkMode} tracks={tracks} />
+        </div>
+      )}
+
+      {/* Always render AuthPopup here so it works on any page */}
+      {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} isDarkMode={isDarkMode} />}
 
       <div className="bg-blur"></div>
     </>

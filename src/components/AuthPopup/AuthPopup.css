@@ -5,7 +5,6 @@
   left: 50%;
   transform: translate(-50%, -50%);
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.700);
   backdrop-filter: blur(12px);
   border-radius: 20px;
   padding: 30px 25px;
@@ -16,17 +15,81 @@
   flex-direction: column;
   gap: 18px;
   animation: popupFade 0.25s ease;
-  color: #fff;
   transition: background 0.3s ease, border 0.3s ease, color 0.3s ease;
 }
 
-.app-wrapper.light .auth-popup { 
+/* Light mode styles */
+.auth-popup.light { 
   background: rgba(255, 255, 255, 0.08); 
   border: 1px solid rgba(0, 0, 0, 0.5);
   color: #000; 
 }
+.auth-popup.light .auth-input { 
+  background: rgba(255, 255, 255, 0.08); 
+  border: 1px solid rgba(0, 0, 0, 0.5); 
+  color: #000; 
+}
+.auth-popup.light .auth-submit { 
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #000;
+}
+.auth-popup.light .auth-submit:hover { 
+  background-color: rgba(255, 255, 255, 0.271); 
+}
+.auth-popup.light .auth-submit:active { 
+  background-color: rgba(255, 255, 255, 0.596); 
+}
+.auth-popup.light .social-btn {
+  border: 1px solid #000;
+  color: #000; /* This makes the icons black */
+}
+.auth-popup.light .auth-toggle button {
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  color: #000;
+}
+.auth-popup.light .auth-toggle button:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(0.97); }
+.auth-popup.light .auth-toggle button:active { background-color: rgba(0, 0, 0, 0.15); transform: scale(0.95); }
 
+/* Dark mode styles */
+.auth-popup.dark {
+  border: 1px solid rgba(255, 255, 255, 0.700);
+  color: #fff;
+}
+.auth-popup.dark .auth-input {
+  border: 1px solid rgba(255, 255, 255, 0.700);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+.auth-popup.dark .auth-submit {
+  border: 1px solid rgba(255, 255, 255, 0.700);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.auth-popup.dark .auth-submit:hover { 
+  background-color: rgba(8, 8, 8, 0.303); 
+}
+.auth-popup.dark .auth-submit:active {
+  background-color: rgb(0, 0, 0);
+  transform: scale(0.95);
+}
+.auth-popup.dark .social-btn {
+  border: 1px solid #ffffff84;
+  color: #fff; /* This makes the icons white */
+}
+.auth-popup.dark .auth-toggle button {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.686);
+  color: #fff;
+}
+.auth-popup.dark .auth-toggle button:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(0.97); }
+.auth-popup.dark .auth-toggle button:active { background-color: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
+
+
+/* Common Styles (apply to both modes) */
 .auth-popup .close-btn { 
+  position: absolute;
   top: 12px; 
   right: 12px; 
   color: inherit; 
@@ -34,6 +97,7 @@
   transition: color 0.2s ease, transform 0.2s ease;
   background-color: transparent;
   border: none;
+  font-size: 1.2rem;
 }
 .auth-popup .close-btn:hover { transform: scale(1.4); }
 .auth-popup .close-btn:active { transform: scale(0.95); }
@@ -49,17 +113,9 @@
 .auth-input {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.700);
   font-size: 1rem;
   outline: none;
-  background: rgba(255,255,255,0.08);
-  color: inherit;
   transition: background 0.3s, border 0.3s;
-}
-.app-wrapper.light .auth-input { 
-  background: rgba(255, 255, 255, 0.08); 
-  border: 1px solid rgba(0, 0, 0, 0.5); 
-  color: #000; 
 }
 .auth-input:focus { border-color: #66aaff; }
 
@@ -67,31 +123,12 @@
   margin-top: 10px;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.700);
-  background-color: rgba(255, 255, 255, 0.08);
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.3s ease, border 0.3s ease;
-  color: inherit;
 }
 .auth-submit:hover { 
   transform: scale(0.97); 
-  background-color: rgba(8, 8, 8, 0.303); 
-}
-.auth-submit:active {
-  background-color: rgb(0, 0, 0);
-  transform: scale(0.95);
-}
-.app-wrapper.light .auth-submit { 
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #000;
-}
-.app-wrapper.light .auth-submit:hover { 
-  background-color: rgba(255, 255, 255, 0.271); 
-}
-.app-wrapper.light .auth-submit:active { 
-  background-color: rgba(255, 255, 255, 0.596); 
 }
 
 .auth-social {
@@ -104,46 +141,21 @@
 .social-btn {
   display: flex;
   align-items: center;
-  gap: 8px; 
-  padding: 8px 12px;
+  justify-content: center;
+  padding: 8px;
   border-radius: 8px; 
-  border: 1px solid rgba(255,255,255,0.3);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
   transition: background 0.2s, transform 0.2s, border 0.2s, color 0.2s;
-  color: inherit;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 .social-btn .social-icon {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: 4px; 
-}
-
-.social-btn.google {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #4285F4;
-}
-.social-btn.github {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.app-wrapper.light .social-btn {
-  border: 1px solid #000;
-  color: #000;
-}
-
-.app-wrapper.dark .social-btn {
-  border: 1px solid #ffffff84;
-  color: #fff;
+  width:44px;
+  height: 44px;
 }
 
 .social-btn:hover { 
   transform: translateY(-2px); 
   background-color: rgba(255, 255, 255, 0.15); 
-  border-color: rgba(255, 255, 255, 0.5);
 }
 .social-btn:active { 
   transform: translateY(0); 
@@ -165,19 +177,3 @@
   cursor: pointer;
   transition: background 0.25s ease, transform 0.15s ease, border 0.25s ease, color 0.25s ease;
 }
-
-.app-wrapper.light .auth-toggle button {
-  background-color: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.7);
-  color: #000;
-}
-.app-wrapper.light .auth-toggle button:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(0.97); }
-.app-wrapper.light .auth-toggle button:active { background-color: rgba(0, 0, 0, 0.15); transform: scale(0.95); }
-
-.app-wrapper.dark .auth-toggle button {
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.686);
-  color: #fff;
-}
-.app-wrapper.dark .auth-toggle button:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(0.97); }
-.app-wrapper.dark .auth-toggle button:active { background-color: rgba(255, 255, 255, 0.2); transform: scale(0.95); }

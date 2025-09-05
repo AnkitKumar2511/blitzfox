@@ -1,7 +1,7 @@
 import React from 'react';
 import './Navbar.css';
 
-const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTracks, goHome }) => {
+const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTracks, showControlDen, goHome }) => {
   return (
     <nav className="navbar">
       <div className="nav-left">
@@ -37,7 +37,15 @@ const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTr
         >
           Switch Realm
         </button>
-        <span className="nav-item">Control Den</span>
+        <button
+          className="nav-item"
+          type="button"
+          onClick={showControlDen}
+          disabled={!showControlDen}
+          tabIndex={0}
+        >
+          Control Den
+        </button>
       </div>
       <div className="nav-right">
         <button
