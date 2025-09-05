@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./ControlDen.css";
+import PopIn from "../PopIn"; // Import the new PopIn component
 
 export default function ControlDen({ isDarkMode, tracks }) {
   const fileInputRef = useRef(null);
@@ -48,65 +49,67 @@ export default function ControlDen({ isDarkMode, tracks }) {
   }, [editing]);
 
   return (
-    <div className={isDarkMode ? "control-den-page dark" : "control-den-page light"}>
-      <div className="profile-section">
-        <div className="profile-image-wrapper" onClick={handleImageClick} role="button" tabIndex={0} aria-label="Edit profile image" onKeyDown={(e) => { if (e.key === 'Enter') handleImageClick(); }}>
-          <img src={profileImage} alt="User logo" className="profile-image" />
-          <div className="edit-overlay">Edit</div>
+    <PopIn distance={20} duration={0.4}>
+      <div className={isDarkMode ? "control-den-page dark" : "control-den-page light"}>
+        <div className="profile-section">
+          <div className="profile-image-wrapper" onClick={handleImageClick} role="button" tabIndex={0} aria-label="Edit profile image" onKeyDown={(e) => { if (e.key === 'Enter') handleImageClick(); }}>
+            <img src={profileImage} alt="User logo" className="profile-image" />
+            <div className="edit-overlay">Edit</div>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageChange}
+            style={{ display: "none" }}
+          />
+          <div className="username-section">
+            {editing ? (
+              <input
+                type="text"
+                ref={usernameInputRef}
+                value={username}
+                onChange={handleUsernameChange}
+                maxLength={24}
+                aria-label="Edit username"
+                onBlur={handleEditToggle}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleEditToggle();
+                  }
+                }}
+              />
+            ) : (
+              <div
+                className="username-display"
+                onClick={handleEditToggle}
+                role="button"
+                tabIndex={0}
+                aria-label="Edit username"
+                onKeyDown={(e) => { if (e.key === 'Enter') handleEditToggle(); }}
+              >
+                {username}
+              </div>
+            )}
+          </div>
         </div>
-        <input
-          type="file"
-          accept="image/*"
-          ref={fileInputRef}
-          onChange={handleImageChange}
-          style={{ display: "none" }}
-        />
-        <div className="username-section">
-          {editing ? (
-            <input
-              type="text"
-              ref={usernameInputRef}
-              value={username}
-              onChange={handleUsernameChange}
-              maxLength={24}
-              aria-label="Edit username"
-              onBlur={handleEditToggle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleEditToggle();
-                }
-              }}
-            />
-          ) : (
-            <div
-              className="username-display"
-              onClick={handleEditToggle}
-              role="button"
-              tabIndex={0}
-              aria-label="Edit username"
-              onKeyDown={(e) => { if (e.key === 'Enter') handleEditToggle(); }}
-            >
-              {username}
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div className="stats-section" aria-live="polite">
-        <div className="stat-item">
-          <h3>Total no of tests done</h3>
-          <p>{totalTests}</p>
-        </div>
-        <div className="stat-item">
-          <h3>Total time spent (s)</h3>
-          <p>{totalTimeSpent}</p>
-        </div>
-        <div className="stat-item">
-          <h3>Tests started (not completed)</h3>
-          <p>{testsStartedNotCompleted}</p>
+        <div className="stats-section" aria-live="polite">
+          <div className="stat-item">
+            <h3>Total no of tests done</h3>
+            <p>{totalTests}</p>
+          </div>
+          <div className="stat-item">
+            <h3>Total time spent (s)</h3>
+            <p>{totalTimeSpent}</p>
+          </div>
+          <div className="stat-item">
+            <h3>Tests started (not completed)</h3>
+            <p>{testsStartedNotCompleted}</p>
+          </div>
         </div>
       </div>
-    </div>
+    </PopIn>
   );
 }
