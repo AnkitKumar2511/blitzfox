@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import './App.css';
+import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import MetricsBox from "./components/MetricsBox/MetricsBox";
 import TypingArea from "./components/TypingArea/TypingArea";
@@ -8,6 +8,22 @@ import AuthPopup from "./components/AuthPopup/AuthPopup";
 import ResetButton from "./components/ResetButton/ResetButton";
 import Tracks from "./components/Tracks/Tracks";
 import ControlDen from "./components/ControlDen/ControlDen";
+import InfoPopup from "./components/InfoPopup.jsx";
+
+import { useAuth } from "./context/AuthContext.jsx";
+import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  serverTimestamp,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
 const WORDS_POOL = [
   "apple", "orange", "banana", "grape", "lemon", "mango",
@@ -20,6 +36,11 @@ const generateWordsArray = (num = 40) =>
   Array(num).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
 
 export default function App() {
+  const { currentUser } = useAuth();
+
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [infoPopupMessage, setInfoPopupMessage] = useState("");
+
   const [testDuration, setTestDuration] = useState(30);
   const [words, setWords] = useState(generateWordsArray());
   const [currentInput, setCurrentInput] = useState("");
@@ -44,7 +65,17 @@ export default function App() {
   const [errorCount, setErrorCount] = useState(0);
 
   const [tracks, setTracks] = useState([]);
-  const [page, setPage] = useState('home');
+  const [page, setPage] = useState("home");
+
+  const [userStats, setUserStats] = useState({
+    totalTests: 0,
+    totalTime: 0,
+    estimatedWords: 0,
+    estimatedErrors: 0,
+    highestWpm: 0,
+    highestRaw: 0,
+    totalAccuracy: 0, // <-- NEW: For calculating average accuracy
+  });
 
   const containerRef = useRef(null);
   const typingBoxRef = useRef(null);
@@ -58,7 +89,6 @@ export default function App() {
     setCurrentInput("");
     setCurrentWordIndex(0);
     setIsActive(false);
-
     setMetricsBoxFlipped(false);
     setLiquidActive(false);
     setShowResults(false);
@@ -67,11 +97,9 @@ export default function App() {
     setLowestWPM(Infinity);
     setRawWPM(0);
     setErrorCount(0);
-
-    if(typingBoxRef.current) {
-        typingBoxRef.current.scrollTop = 0;
+    if (typingBoxRef.current) {
+      typingBoxRef.current.scrollTop = 0;
     }
-
     if (containerRef.current) {
       containerRef.current.focus();
     }
@@ -81,23 +109,19 @@ export default function App() {
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft(t => t - 1);
-
+        setTimeLeft((t) => t - 1);
         const typedCharsCount = getTypedCharsCount();
         const correctCharsCount = getCorrectCharsCount();
         const elapsed = testDuration - (timeLeft - 1);
         const elapsedMin = elapsed / 60;
-
-        const raw = elapsedMin > 0 ? (typedCharsCount / 5) / elapsedMin : 0;
-        const net = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
+        const raw = elapsedMin > 0 ? typedCharsCount / 5 / elapsedMin : 0;
+        const net = elapsedMin > 0 ? correctCharsCount / 5 / elapsedMin : 0;
         const errors = typedCharsCount - correctCharsCount;
-
         setRawWPM(raw);
         setErrorCount(errors);
-
-        setHistoryWPM(prev => [...prev, net]);
-        setHighestWPM(prev => Math.max(prev, net));
-        setLowestWPM(prev => Math.min(prev, net));
+        setHistoryWPM((prev) => [...prev, net]);
+        setHighestWPM((prev) => Math.max(prev, net));
+        setLowestWPM((prev) => Math.min(prev, net));
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -110,27 +134,91 @@ export default function App() {
 
       const typedCharsCount = getTypedCharsCount();
       const correctCharsCount = getCorrectCharsCount();
-      const elapsed = testDuration;
-      const elapsedMin = elapsed / 60;
+      const elapsedMin = testDuration / 60;
       const wpm = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
-      const accuracy = typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
+      const accuracy =
+        typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
 
-      setTracks(prev => [
-        ...prev,
+      const newTrack = {
+        wpm: parseFloat(wpm.toFixed(2)),
+        accuracy: parseFloat(accuracy.toFixed(2)),
+        errors: errorCount,
+        rawWpm: parseFloat(rawWPM.toFixed(2)),
+        testDuration,
+        createdAt: serverTimestamp(),
+      };
+
+      if (currentUser) {
+        const saveTrackAndUpdateStats = async () => {
+          try {
+            await addDoc(collection(db, "tests"), {
+              ...newTrack,
+              userId: currentUser.uid,
+            });
+
+            const statsRef = doc(db, "userStats", currentUser.uid);
+            const newStats = {
+              totalTests: (userStats.totalTests || 0) + 1,
+              totalTime: (userStats.totalTime || 0) + testDuration,
+              estimatedWords: (userStats.estimatedWords || 0) + (correctCharsCount / 5),
+              estimatedErrors: (userStats.estimatedErrors || 0) + errorCount,
+              highestWpm: Math.max(userStats.highestWpm || 0, wpm),
+              highestRaw: Math.max(userStats.highestRaw || 0, rawWPM),
+              totalAccuracy: (userStats.totalAccuracy || 0) + accuracy, // <-- NEW
+            };
+            await setDoc(statsRef, newStats, { merge: true });
+            setUserStats(newStats);
+          } catch (error) {
+            console.error("Error saving  ", error);
+          }
+        };
+        saveTrackAndUpdateStats();
+      }
+
+      setTracks((prev) => [
         {
+          ...newTrack,
           id: Date.now(),
-          dateTimeDisplay: new Date().toLocaleString('en-IN'),
-          wpm,
-          accuracy,
-          errors: errorCount,
-          rawWpm: rawWPM,
-          highestWpm: highestWPM,
-          lowestWpm: lowestWPM,
-          testDuration,
-        }
+          dateTimeDisplay: new Date().toLocaleString("en-IN"),
+        },
+        ...prev,
       ]);
     }
-  }, [timeLeft, isActive]);
+  }, [timeLeft, isActive, currentUser, testDuration, rawWPM, errorCount, userStats]);
+  
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!currentUser) {
+        setTracks([]);
+        setUserStats({ totalTests: 0, totalTime: 0, estimatedWords: 0, estimatedErrors: 0, highestWpm: 0, highestRaw: 0, totalAccuracy: 0 });
+        return;
+      }
+      
+      const q = query(
+        collection(db, "tests"),
+        where("userId", "==", currentUser.uid),
+        orderBy("createdAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const userTracks = querySnapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          dateTimeDisplay: data.createdAt?.toDate().toLocaleString("en-IN") || 'N/A',
+        };
+      });
+      setTracks(userTracks);
+
+      const statsRef = doc(db, "userStats", currentUser.uid);
+      const statsSnap = await getDoc(statsRef);
+      if (statsSnap.exists()) {
+        setUserStats(statsSnap.data());
+      }
+    };
+
+    fetchUserData();
+  }, [currentUser]);
 
   useEffect(() => {
     if (isActive) {
@@ -141,20 +229,25 @@ export default function App() {
       setLiquidActive(false);
     }
   }, [isActive, timeLeft]);
-  
+
   useEffect(() => {
     if (typingBoxRef.current && currentWordIndex > 0) {
-      const currentWordEl = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
-      const prevWordEl = document.querySelector(`[data-word-index="${currentWordIndex - 1}"]`);
-      
+      const currentWordEl = document.querySelector(
+        `[data-word-index="${currentWordIndex}"]`
+      );
+      const prevWordEl = document.querySelector(
+        `[data-word-index="${currentWordIndex - 1}"]`
+      );
       if (currentWordEl && prevWordEl && currentWordEl.offsetTop > prevWordEl.offsetTop) {
         typingBoxRef.current.scrollTop = currentWordEl.offsetTop;
 
-        const newLine = Array(20).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
-        setWords(w => {
-            const newWords = [...w, ...newLine];
-            setCharResults(cr => [...cr, ...newLine.map(() => [])]);
-            return newWords;
+        const newLine = Array(20)
+          .fill(0)
+          .map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
+        setWords((w) => {
+          const newWords = [...w, ...newLine];
+          setCharResults((cr) => [...cr, ...newLine.map(() => [])]);
+          return newWords;
         });
       }
     }
@@ -176,26 +269,26 @@ export default function App() {
   const getTypedCharsCount = () => {
     let count = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-        count += words[i].length + 1;
+      count += words[i].length + 1;
     }
     count += currentInput.length;
     return count;
   };
-  
+
   const getCorrectCharsCount = () => {
     let correct = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-        const resultForWordAndSpace = charResults[i] || [];
-        correct += resultForWordAndSpace.filter(r => r === true).length;
+      const resultForWordAndSpace = charResults[i] || [];
+      correct += resultForWordAndSpace.filter((r) => r === true).length;
     }
-    const currentExpected = words[currentWordIndex] + ' ';
-    for(let i = 0; i < currentInput.length; i++) {
-        if(currentInput[i] === currentExpected[i]) {
-            correct++;
-        }
+    const currentExpected = words[currentWordIndex] + " ";
+    for (let i = 0; i < currentInput.length; i++) {
+      if (currentInput[i] === currentExpected[i]) {
+        correct++;
+      }
     }
     return correct;
-  };  
+  };
 
   function handleKeyDown(e) {
     if (timeLeft === 0) return;
@@ -203,9 +296,9 @@ export default function App() {
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") {
       return;
     }
-    
+
     if (document.activeElement !== containerRef.current) {
-        containerRef.current.focus();
+      containerRef.current.focus();
     }
 
     if (!isActive) setIsActive(true);
@@ -224,27 +317,27 @@ export default function App() {
 
     if (e.key === " ") {
       e.preventDefault();
-      
+
       if (currentInput === "") return;
-      
-      const expectedWithSpace = currentWord + ' ';
-      const results = expectedWithSpace.split('').map((char, i) => {
+
+      const expectedWithSpace = currentWord + " ";
+      const results = expectedWithSpace.split("").map((char, i) => {
         if (i < currentInput.length) {
-            return currentInput[i] === char;
+          return currentInput[i] === char;
         }
         if (i === currentWord.length) {
-            return currentInput.length === currentWord.length;
+          return currentInput.length === currentWord.length;
         }
         return false;
       });
 
-      setCharResults(cr => {
+      setCharResults((cr) => {
         const newCr = [...cr];
         newCr[currentWordIndex] = results;
         return newCr;
       });
 
-      setCurrentWordIndex(i => i + 1);
+      setCurrentWordIndex((i) => i + 1);
       setCurrentInput("");
       return;
     }
@@ -252,7 +345,7 @@ export default function App() {
     if (/^[a-zA-Z]$/.test(e.key)) {
       e.preventDefault();
       if (currentInput.length < currentWord.length) {
-        setCurrentInput(c => c + e.key.toLowerCase());
+        setCurrentInput((c) => c + e.key.toLowerCase());
       }
     }
   }
@@ -260,26 +353,30 @@ export default function App() {
   const typedCharsCount = getTypedCharsCount();
   const correctChars = getCorrectCharsCount();
   const elapsedMin = (testDuration - timeLeft) / 60;
-  const wpm = elapsedMin > 0 ? (correctChars / 5) / elapsedMin : 0;
+  const wpm = elapsedMin > 0 ? correctChars / 5 / elapsedMin : 0;
   const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : 0;
 
-  // Navigation handlers
-  const handleShowTracks = () => setPage('tracks');
-  const handleGoHome = () => setPage('home');
-  const handleCloseTracks = () => setPage('home');
+  const handleShowTracks = () => setPage("tracks");
+  const handleGoHome = () => setPage("home");
+  const handleCloseTracks = () => setPage("home");
   const handleClearTracks = () => setTracks([]);
-  const handleShowControlDen = () => setPage('controlDen');
+  const handleShowControlDen = () => setPage("controlDen");
+
+  const triggerInfoPopup = (message) => {
+    setInfoPopupMessage(message);
+    setShowInfoPopup(true);
+  };
 
   return (
     <>
-      {page === 'home' && (
-        <div 
-          className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} 
-          onKeyDown={handleKeyDown} 
-          tabIndex={0} 
+      {page === "home" && (
+        <div
+          className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
           ref={containerRef}
         >
-          <Navbar 
+          <Navbar
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
@@ -297,7 +394,7 @@ export default function App() {
             wpm={wpm}
             accuracy={accuracy}
           />
-          
+
           <TypingArea
             typingBoxRef={typingBoxRef}
             words={words}
@@ -327,9 +424,9 @@ export default function App() {
         </div>
       )}
 
-      {page === 'tracks' && (
+      {page === "tracks" && (
         <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
-          <Navbar 
+          <Navbar
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
@@ -338,17 +435,13 @@ export default function App() {
             showControlDen={handleShowControlDen}
             goHome={handleGoHome}
           />
-          <Tracks
-            tracks={tracks}
-            onCloseTracks={handleCloseTracks}
-            onClearAll={handleClearTracks}
-          />
+          <Tracks tracks={tracks} onCloseTracks={handleCloseTracks} onClearAll={handleClearTracks} />
         </div>
       )}
 
-      {page === 'controlDen' && (
+      {page === "controlDen" && (
         <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
-          <Navbar 
+          <Navbar
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
             resetTest={resetTest}
@@ -357,12 +450,25 @@ export default function App() {
             showControlDen={handleShowControlDen}
             goHome={handleGoHome}
           />
-          <ControlDen isDarkMode={isDarkMode} tracks={tracks} />
+          <ControlDen isDarkMode={isDarkMode} userStats={userStats} />
         </div>
       )}
 
-      {/* Always render AuthPopup here so it works on any page */}
-      {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} isDarkMode={isDarkMode} />}
+      {showAuthPopup && (
+        <AuthPopup
+          setShowAuthPopup={setShowAuthPopup}
+          isDarkMode={isDarkMode}
+          triggerInfoPopup={triggerInfoPopup}
+        />
+      )}
+      
+      {showInfoPopup && (
+        <InfoPopup
+          message={infoPopupMessage}
+          onClose={() => setShowInfoPopup(false)}
+          isDarkMode={isDarkMode}
+        />
+      )}
 
       <div className="bg-blur"></div>
     </>

@@ -1,7 +1,28 @@
-import React from 'react';
-import './Navbar.css';
+import React from "react";
+import "./Navbar.css";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { auth } from "../../firebase.js";
+import { signOut } from "firebase/auth";
 
-const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTracks, showControlDen, goHome }) => {
+const Navbar = ({
+  isDarkMode,
+  setIsDarkMode,
+  resetTest,
+  setShowAuthPopup,
+  showTracks,
+  showControlDen,
+  goHome,
+}) => {
+  const { currentUser } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
   return (
     <nav className="navbar">
       <div className="nav-left">
@@ -9,10 +30,12 @@ const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTr
           src={isDarkMode ? "/2.png" : "./1.png"}
           alt="Logo"
           className="nav-logo"
-          onClick={goHome}           // use goHome prop to switch to home page state
-          style={{ cursor: 'pointer' }}
+          onClick={goHome}
+          style={{ cursor: "pointer" }}
           tabIndex={0}
-          onKeyDown={(e) => { if (e.key === 'Enter') goHome(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") goHome();
+          }}
           role="button"
           aria-label="Go to home"
         />
@@ -48,12 +71,18 @@ const Navbar = ({ isDarkMode, setIsDarkMode, resetTest, setShowAuthPopup, showTr
         </button>
       </div>
       <div className="nav-right">
-        <button
-          className="join-club"
-          onClick={() => setShowAuthPopup(true)}
-        >
-          Join the Club
-        </button>
+        {currentUser ? (
+          <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <span>Hi, {currentUser.displayName || currentUser.email}</span>
+            <button className="join-club" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        ) : (
+          <button className="join-club" onClick={() => setShowAuthPopup(true)}>
+            Join the Club
+          </button>
+        )}
       </div>
     </nav>
   );
