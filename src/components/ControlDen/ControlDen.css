@@ -66,9 +66,7 @@
   padding: 0;
   margin: 0;
 }
-.username-input-large:focus {
-  outline: none;
-}
+.username-input-large:focus { outline: none; }
 
 .edit-icon-button {
   background: none;
@@ -80,10 +78,7 @@
   font-size: 1.5rem;
   padding: 5px;
 }
-
-.edit-icon-button:hover {
-  opacity: 1;
-}
+.edit-icon-button:hover { opacity: 1; }
 
 .user-info-grid {
   display: grid;
@@ -107,9 +102,9 @@
 }
 
 .info-field-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .info-field-wrapper input, .info-field-wrapper span {
@@ -122,43 +117,38 @@
   box-sizing: border-box;
   width: 100%;
 }
-.control-den-page.dark .info-field-wrapper input, .control-den-page.dark .info-field-wrapper span { background: rgba(255,255,255,0.08); }
+.control-den-page.dark .info-field-wrapper input,
+.control-den-page.dark .info-field-wrapper span {
+  background: rgba(255,255,255,0.08);
+}
 
-.info-field-wrapper input {
-  border: 1px solid currentColor;
-}
-.info-field-wrapper input:focus {
-  outline: none;
-  border-color: #4A90E2;
-}
+.info-field-wrapper input { border: 1px solid currentColor; }
+.info-field-wrapper input:focus { outline: none; border-color: #4A90E2; }
 
 .info-field-wrapper span {
-    min-height: 42px;
-    display: flex;
-    align-items: center;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
 }
 
 .field-edit-icon {
-    position: absolute;
-    right: 10px;
-    font-size: 1.1rem;
-    background: none;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    opacity: 0.6;
-    transition: opacity 0.2s;
-    padding: 5px;
+  position: absolute;
+  right: 10px;
+  font-size: 1.1rem;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  padding: 5px;
 }
+.field-edit-icon:hover { opacity: 1; }
 
-.field-edit-icon:hover {
-    opacity: 1;
-}
-
-/* --- UPDATED STATS SECTION --- */
+/* --- STATS SECTION --- */
 .stats-section {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 4 columns per row */
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   text-align: center;
 }
@@ -166,8 +156,8 @@
 .stat-item {
   border-radius: 12px;
   padding: 16px 12px;
-  background: transparent; /* Transparent by default */
-  border: 1px solid rgba(128, 128, 128, 0.25); /* Subtle border to see the box */
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.25);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -179,25 +169,22 @@
   z-index: 1;
 }
 
-/* Light Mode Hover Effect */
 .control-den-page.light .stat-item:hover {
-  background-color: rgba(0, 0, 0, 0.08); /* Darken on hover */
+  background-color: rgba(0, 0, 0, 0.08);
   transform: scale(1.05);
   z-index: 5;
 }
 
-/* Dark Mode Hover Effect */
 .control-den-page.dark .stat-item:hover {
-  background-color: rgba(0, 0, 0, 0.3); /* Darken on hover */
+  background-color: rgba(0, 0, 0, 0.3);
   transform: scale(1.05);
   z-index: 5;
 }
 
-/* Font size changes */
 .stat-item h3 {
   font-weight: 600;
   margin: 0 0 5px 0;
-  font-size: 0.8rem; /* Smaller text for the label */
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: inherit;
@@ -205,9 +192,81 @@
 }
 
 .stat-item p {
-  font-size: 2.5rem; /* Bigger text for the number */
+  font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
   user-select: text;
   color: inherit;
 }
+
+/* ================== RESPONSIVE ================== */
+/* Tablet (<=1024px) */
+@media (max-width: 1024px) {
+  .control-den-page {
+    max-width: 860px;
+    margin: 100px auto 32px auto;
+    padding: 20px;
+  }
+
+  .username-display-large,
+  .username-input-large { font-size: 2.2rem; }
+
+  .user-info-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+
+  .stats-section {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.9rem;
+  }
+
+  .stat-item p { font-size: 2.2rem; }
+}
+
+/* Mobile (<=768px): single internal scroll, below fixed navbar */
+@media (max-width: 768px) {
+  .control-den-page {
+    max-width: 95%;
+    margin: calc(70px + 16px) auto 16px auto;                  /* below navbar */
+    max-height: calc(100vh - (70px + 16px + 16px));            /* fit viewport */
+    overflow: auto;                                            /* SINGLE scroll */
+    -webkit-overflow-scrolling: touch;
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .username-display-large,
+  .username-input-large { font-size: 1.8rem; }
+
+  .edit-icon-button { font-size: 1.3rem; }
+
+  .user-info-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  .info-field-wrapper input,
+  .info-field-wrapper span {
+    font-size: 1rem;
+    padding: 10px 40px 10px 12px;
+  }
+
+  .stats-section { grid-template-columns: 1fr; gap: 0.8rem; }
+  .stat-item { padding: 14px 12px; }
+  .stat-item p { font-size: 2rem; }
+}
+
+/* Small phones (<=480px) */
+@media (max-width: 480px) {
+  .control-den-page {
+    margin: calc(70px + 12px) 10px 12px 10px;
+    max-height: calc(100vh - (70px + 12px + 12px));
+    padding: 14px;
+  }
+
+  .username-display-large,
+  .username-input-large { font-size: 1.6rem; }
+
+  .stat-item p { font-size: 1.8rem; }
+}
+
+/* Prevent any horizontal scrolling */
+html, body, .control-den-page { overflow-x: hidden; max-width: 100vw; }
