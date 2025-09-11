@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import MetricsBox from "./components/MetricsBox/MetricsBox";
@@ -25,33 +25,25 @@ import {
   setDoc,
 } from "firebase/firestore";
 
-/* ============ RANDOM WORDS VIA API (no API key) ============ */
-/* Primary: Vercel endpoint: https://random-word-api.vercel.app/api?words=N (returns ["a","b",...]) [1]
-   Fallback: Heroku mirror: https://random-word-api.herokuapp.com/word?number=N [2] */
-async function fetchWordsBatch(count) {
-  // Primary
-  try {
-    const res = await fetch(`https://random-word-api.vercel.app/api?words=${count}`);
-    if (!res.ok) throw new Error("vercel endpoint error");
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) return data.map(String);
-    throw new Error("vercel invalid payload");
-  } catch (_) {
-    // Fallback
-    const res2 = await fetch(`https://random-word-api.herokuapp.com/word?number=${count}`);
-    if (!res2.ok) throw new Error("heroku endpoint error");
-    const data2 = await res2.json();
-    if (Array.isArray(data2) && data2.length > 0) return data2.map(String);
-    throw new Error("heroku invalid payload");
-  }
+// Helper: fetch local 1-1000.txt and parse lines to array
+async function fetchLocalWordList() {
+  const res = await fetch("/1-1000.txt");
+  if (!res.ok) throw new Error("Failed to fetch word list");
+  const text = await res.text();
+  return text
+    .split(/\r?\n/)
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean);
 }
 
-/* Sanitizer to ensure only a-z words for current logic */
-function normalizeWords(arr) {
-  return arr
-    .map(w => (typeof w === "string" ? w.toLowerCase() : String(w || "")))
-    .map(w => w.replace(/[^a-z]/g, "")) // keep letters only
-    .filter(w => w.length > 0);
+// Random helper: pick N random words from array
+function pickRandomWords(pool, count) {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const w = pool[Math.floor(Math.random() * pool.length)];
+    result.push(w);
+  }
+  return result;
 }
 
 export default function App() {
@@ -62,11 +54,14 @@ export default function App() {
 
   const [testDuration, setTestDuration] = useState(30);
 
-  // Words and typing state
-  const [words, setWords] = useState([]);               // filled by API
+  // Word list loaded once from 1-1000.txt
+  const [wordPool, setWordPool] = useState([]);
+
+  // Words used in current test
+  const [words, setWords] = useState([]);               
   const [currentInput, setCurrentInput] = useState("");
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [charResults, setCharResults] = useState([]);   // mirrors words length
+  const [charResults, setCharResults] = useState([]);   
 
   const [timeLeft, setTimeLeft] = useState(testDuration);
   const [isActive, setIsActive] = useState(false);
@@ -101,41 +96,28 @@ export default function App() {
   const containerRef = useRef(null);
   const typingBoxRef = useRef(null);
 
-  /* ============ Fetch helpers ============ */
   const INITIAL_COUNT = 40;
   const TOP_UP_COUNT = 20;
 
-  const seedWords = useCallback(async () => {
-    try {
-      const batch = normalizeWords(await fetchWordsBatch(INITIAL_COUNT));
-      if (batch.length < INITIAL_COUNT) {
-        // If API returns less, try topping up once
-        const extra = normalizeWords(await fetchWordsBatch(INITIAL_COUNT - batch.length));
-        batch.push(...extra);
-      }
-      setWords(batch);
-      setCharResults(Array(batch.length).fill(null).map(() => []));
-    } catch (err) {
-      console.error("Failed to seed words:", err);
-      // As a last resort, keep empty list; UI will still run but with no input
-      setWords([]);
-      setCharResults([]);
-    }
-  }, []);
+  // Seed words from local pool
+  const seedWords = useCallback(() => {
+    if (wordPool.length === 0) return; // wait until loaded
+    const initialWords = pickRandomWords(wordPool, INITIAL_COUNT);
+    setWords(initialWords);
+    setCharResults(initialWords.map(() => []));
+  }, [wordPool]);
 
-  const topUpWords = useCallback(async () => {
-    try {
-      const batch = normalizeWords(await fetchWordsBatch(TOP_UP_COUNT));
-      setWords(prev => {
-        const merged = [...prev, ...batch];
-        setCharResults(cr => [...cr, ...batch.map(() => [])]);
-        return merged;
-      });
-    } catch (err) {
-      console.error("Failed to top up words:", err);
-    }
-  }, []);
+  // Append more words on demand
+  const topUpWords = useCallback(() => {
+    if (wordPool.length === 0) return;
+    const additionalWords = pickRandomWords(wordPool, TOP_UP_COUNT);
+    setWords((prevWords) => {
+      setCharResults((prevCharResults) => [...prevCharResults, ...additionalWords.map(() => [])]);
+      return [...prevWords, ...additionalWords];
+    });
+  }, [wordPool]);
 
+  // Reset handling
   const resetTest = useCallback((newDuration = testDuration) => {
     setTestDuration(newDuration);
     setTimeLeft(newDuration);
@@ -152,11 +134,21 @@ export default function App() {
     setErrorCount(0);
     if (typingBoxRef.current) typingBoxRef.current.scrollTop = 0;
     if (containerRef.current) containerRef.current.focus();
-    // Re-seed words fresh from API
     seedWords();
   }, [seedWords, testDuration]);
 
-  // Seed words on first mount
+  // Load word pool once on mount
+  useEffect(() => {
+    fetchLocalWordList()
+      .then(wordsList => {
+        setWordPool(wordsList);
+      })
+      .catch(err => {
+        console.error("Failed to load word pool file", err);
+      });
+  }, []);
+
+  // Seed when word pool available or reset called
   useEffect(() => { seedWords(); }, [seedWords]);
 
   /* ================= TIMER/WPM ================= */
@@ -283,14 +275,14 @@ export default function App() {
     }
   }, [isActive, timeLeft]);
 
-  // On line change, scroll and top-up from API
+  // On line change, scroll and top up words
   useEffect(() => {
     if (typingBoxRef.current && currentWordIndex > 0) {
       const currentWordEl = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
       const prevWordEl = document.querySelector(`[data-word-index="${currentWordIndex - 1}"]`);
       if (currentWordEl && prevWordEl && currentWordEl.offsetTop > prevWordEl.offsetTop) {
         typingBoxRef.current.scrollTop = currentWordEl.offsetTop;
-        topUpWords(); // fetch next batch from API
+        topUpWords();
       }
     }
   }, [currentWordIndex, topUpWords]);

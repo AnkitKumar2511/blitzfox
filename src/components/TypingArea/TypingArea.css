@@ -54,6 +54,24 @@
   animation: blink 1s steps(2, start) infinite;
 }
 
+/* ================= DESKTOP (>=1025px) =================
+   Show ~5 full lines on laptops/PC */
+@media (min-width: 1025px) {
+  .typing-area-box {
+    height: 17rem;           /* ~5 lines with line-height 3.4rem + buffer */
+  }
+
+  .typing-area {
+    font-size: 34px;         /* slight downscale to fit more lines */
+    line-height: 3.4rem;     /* 5 * 3.4rem = 17rem content height */
+  }
+
+  .cursor {
+    top: 6px;
+    bottom: 6px;
+  }
+}
+
 /* ================= TABLET (769px–1024px) =================
    Enforce larger font and show ~5 full lines without clipping */
 @media (min-width: 769px) and (max-width: 1024px) {
@@ -61,7 +79,7 @@
   .typing-area-box.typing-area-box {
     padding: 0 28px;
     max-width: 900px;
-    height: 15.9rem;       /* 5 * 3.0rem + small buffer */
+    height: 15.6rem;       /* 5 * 3.0rem + small buffer */
     margin: 24px auto 0 auto;
   }
 
