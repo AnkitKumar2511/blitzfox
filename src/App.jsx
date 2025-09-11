@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import "./App.css";
 import Navbar from "./components/Navbar/Navbar";
 import MetricsBox from "./components/MetricsBox/MetricsBox";
@@ -25,15 +25,34 @@ import {
   setDoc,
 } from "firebase/firestore";
 
-const WORDS_POOL = [
-  "apple", "orange", "banana", "grape", "lemon", "mango",
-  "peach", "pear", "plum", "berry", "melon", "cherry",
-  "fruit", "juice", "sweet", "fresh", "ripe", "seed", "tree",
-  "garden", "flower", "green", "plant", "leaf", "root", "bloom", "vine"
-];
+/* ============ RANDOM WORDS VIA API (no API key) ============ */
+/* Primary: Vercel endpoint: https://random-word-api.vercel.app/api?words=N (returns ["a","b",...]) [1]
+   Fallback: Heroku mirror: https://random-word-api.herokuapp.com/word?number=N [2] */
+async function fetchWordsBatch(count) {
+  // Primary
+  try {
+    const res = await fetch(`https://random-word-api.vercel.app/api?words=${count}`);
+    if (!res.ok) throw new Error("vercel endpoint error");
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) return data.map(String);
+    throw new Error("vercel invalid payload");
+  } catch (_) {
+    // Fallback
+    const res2 = await fetch(`https://random-word-api.herokuapp.com/word?number=${count}`);
+    if (!res2.ok) throw new Error("heroku endpoint error");
+    const data2 = await res2.json();
+    if (Array.isArray(data2) && data2.length > 0) return data2.map(String);
+    throw new Error("heroku invalid payload");
+  }
+}
 
-const generateWordsArray = (num = 40) =>
-  Array(num).fill(0).map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
+/* Sanitizer to ensure only a-z words for current logic */
+function normalizeWords(arr) {
+  return arr
+    .map(w => (typeof w === "string" ? w.toLowerCase() : String(w || "")))
+    .map(w => w.replace(/[^a-z]/g, "")) // keep letters only
+    .filter(w => w.length > 0);
+}
 
 export default function App() {
   const { currentUser } = useAuth();
@@ -42,12 +61,13 @@ export default function App() {
   const [infoPopupMessage, setInfoPopupMessage] = useState("");
 
   const [testDuration, setTestDuration] = useState(30);
-  const [words, setWords] = useState(generateWordsArray());
+
+  // Words and typing state
+  const [words, setWords] = useState([]);               // filled by API
   const [currentInput, setCurrentInput] = useState("");
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [charResults, setCharResults] = useState(
-    Array(40).fill(null).map(() => [])
-  );
+  const [charResults, setCharResults] = useState([]);   // mirrors words length
+
   const [timeLeft, setTimeLeft] = useState(testDuration);
   const [isActive, setIsActive] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -81,12 +101,44 @@ export default function App() {
   const containerRef = useRef(null);
   const typingBoxRef = useRef(null);
 
-  const resetTest = (newDuration = testDuration) => {
-    const initialWords = generateWordsArray();
+  /* ============ Fetch helpers ============ */
+  const INITIAL_COUNT = 40;
+  const TOP_UP_COUNT = 20;
+
+  const seedWords = useCallback(async () => {
+    try {
+      const batch = normalizeWords(await fetchWordsBatch(INITIAL_COUNT));
+      if (batch.length < INITIAL_COUNT) {
+        // If API returns less, try topping up once
+        const extra = normalizeWords(await fetchWordsBatch(INITIAL_COUNT - batch.length));
+        batch.push(...extra);
+      }
+      setWords(batch);
+      setCharResults(Array(batch.length).fill(null).map(() => []));
+    } catch (err) {
+      console.error("Failed to seed words:", err);
+      // As a last resort, keep empty list; UI will still run but with no input
+      setWords([]);
+      setCharResults([]);
+    }
+  }, []);
+
+  const topUpWords = useCallback(async () => {
+    try {
+      const batch = normalizeWords(await fetchWordsBatch(TOP_UP_COUNT));
+      setWords(prev => {
+        const merged = [...prev, ...batch];
+        setCharResults(cr => [...cr, ...batch.map(() => [])]);
+        return merged;
+      });
+    } catch (err) {
+      console.error("Failed to top up words:", err);
+    }
+  }, []);
+
+  const resetTest = useCallback((newDuration = testDuration) => {
     setTestDuration(newDuration);
     setTimeLeft(newDuration);
-    setWords(initialWords);
-    setCharResults(Array(initialWords.length).fill(null).map(() => []));
     setCurrentInput("");
     setCurrentWordIndex(0);
     setIsActive(false);
@@ -98,35 +150,36 @@ export default function App() {
     setLowestWPM(Infinity);
     setRawWPM(0);
     setErrorCount(0);
-    if (typingBoxRef.current) {
-      typingBoxRef.current.scrollTop = 0;
-    }
-    if (containerRef.current) {
-      containerRef.current.focus();
-    }
-  };
+    if (typingBoxRef.current) typingBoxRef.current.scrollTop = 0;
+    if (containerRef.current) containerRef.current.focus();
+    // Re-seed words fresh from API
+    seedWords();
+  }, [seedWords, testDuration]);
 
+  // Seed words on first mount
+  useEffect(() => { seedWords(); }, [seedWords]);
+
+  /* ================= TIMER/WPM ================= */
   useEffect(() => {
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft((t) => {
-            const newTimeLeft = t - 1;
-            const typedCharsCount = getTypedCharsCount();
-            const correctCharsCount = getCorrectCharsCount();
-            const elapsed = testDuration - newTimeLeft;
-            const elapsedMin = elapsed / 60;
-            const currentRaw = elapsedMin > 0 ? typedCharsCount / 5 / elapsedMin : 0;
-            const currentNet = elapsedMin > 0 ? correctCharsCount / 5 / elapsedMin : 0;
-            
-            // Correctly update state to track the PEAK values
-            setRawWPM((prev) => Math.max(prev, currentRaw));
-            setHighestWPM((prev) => Math.max(prev, currentNet));
-            setLowestWPM((prev) => Math.min(prev, currentNet));
-            setErrorCount(typedCharsCount - correctCharsCount);
-            setHistoryWPM((prev) => [...prev, currentNet]);
-            
-            return newTimeLeft;
+          const newTimeLeft = t - 1;
+          const typedCharsCount = getTypedCharsCount();
+          const correctCharsCount = getCorrectCharsCount();
+          const elapsed = testDuration - newTimeLeft;
+          const elapsedMin = elapsed / 60;
+          const currentRaw = elapsedMin > 0 ? typedCharsCount / 5 / elapsedMin : 0;
+          const currentNet = elapsedMin > 0 ? correctCharsCount / 5 / elapsedMin : 0;
+
+          setRawWPM((prev) => Math.max(prev, currentRaw));
+          setHighestWPM((prev) => Math.max(prev, currentNet));
+          setLowestWPM((prev) => Math.min(prev, currentNet));
+          setErrorCount(typedCharsCount - correctCharsCount);
+          setHistoryWPM((prev) => [...prev, currentNet]);
+
+          return newTimeLeft;
         });
       }, 1000);
     }
@@ -136,35 +189,31 @@ export default function App() {
   useEffect(() => {
     if (timeLeft === 0 && isActive) {
       setIsActive(false);
-      
+
       const typedCharsCount = getTypedCharsCount();
       const correctCharsCount = getCorrectCharsCount();
       const elapsedMin = testDuration / 60;
-      
-      // Calculate final net and raw WPM
+
       const finalWpm = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
       const finalRawWpm = elapsedMin > 0 ? (typedCharsCount / 5) / elapsedMin : 0;
       const finalAccuracy = typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
       const finalErrorCount = typedCharsCount - correctCharsCount;
 
-      // Ensure the correct hierarchy is maintained
       const finalHighestWpm = Math.max(highestWPM, finalWpm);
       const assuredRawWpm = Math.max(rawWPM, finalRawWpm, finalHighestWpm);
-      
-      // Update state with the final, assured values before showing results
+
       setRawWPM(assuredRawWpm);
       setHighestWPM(finalHighestWpm);
       setErrorCount(finalErrorCount);
 
-      // Now show the results popup
       setShowResults(true);
 
       const newTrack = {
         wpm: parseFloat(finalWpm.toFixed(2)),
         accuracy: parseFloat(finalAccuracy.toFixed(2)),
         errors: finalErrorCount,
-        rawWpm: parseFloat(assuredRawWpm.toFixed(2)), // Pass the assured peak raw
-        highestWpm: parseFloat(finalHighestWpm.toFixed(2)), // Pass the assured peak net
+        rawWpm: parseFloat(assuredRawWpm.toFixed(2)),
+        highestWpm: parseFloat(finalHighestWpm.toFixed(2)),
         lowestWpm: isFinite(lowestWPM) ? parseFloat(lowestWPM.toFixed(2)) : 0,
         testDuration,
         createdAt: serverTimestamp(),
@@ -193,10 +242,13 @@ export default function App() {
         saveTrackAndUpdateStats();
       }
 
-      setTracks((prev) => [{ ...newTrack, id: Date.now(), dateTimeDisplay: new Date().toLocaleString("en-IN") }, ...prev]);
+      setTracks((prev) => [
+        { ...newTrack, id: Date.now(), dateTimeDisplay: new Date().toLocaleString("en-IN") },
+        ...prev
+      ]);
     }
   }, [timeLeft, isActive, currentUser, testDuration, highestWPM, lowestWPM, rawWPM, userStats]);
-  
+
   useEffect(() => {
     const fetchUserData = async () => {
       if (!currentUser) {
@@ -204,10 +256,14 @@ export default function App() {
         setUserStats({ totalTests: 0, totalTime: 0, estimatedWords: 0, estimatedErrors: 0, highestWpm: 0, highestRaw: 0, totalAccuracy: 0 });
         return;
       }
-      
+
       const q = query(collection(db, "tests"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      const userTracks = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), dateTimeDisplay: doc.data().createdAt?.toDate().toLocaleString("en-IN") || 'N/A' }));
+      const userTracks = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        dateTimeDisplay: doc.data().createdAt?.toDate().toLocaleString("en-IN") || 'N/A'
+      }));
       setTracks(userTracks);
 
       const statsRef = doc(db, "userStats", currentUser.uid);
@@ -227,21 +283,17 @@ export default function App() {
     }
   }, [isActive, timeLeft]);
 
+  // On line change, scroll and top-up from API
   useEffect(() => {
     if (typingBoxRef.current && currentWordIndex > 0) {
       const currentWordEl = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
       const prevWordEl = document.querySelector(`[data-word-index="${currentWordIndex - 1}"]`);
       if (currentWordEl && prevWordEl && currentWordEl.offsetTop > prevWordEl.offsetTop) {
         typingBoxRef.current.scrollTop = currentWordEl.offsetTop;
-        const newLine = generateWordsArray(20);
-        setWords((w) => {
-          const newWords = [...w, ...newLine];
-          setCharResults((cr) => [...cr, ...newLine.map(() => [])]);
-          return newWords;
-        });
+        topUpWords(); // fetch next batch from API
       }
     }
-  }, [currentWordIndex]);
+  }, [currentWordIndex, topUpWords]);
 
   useEffect(() => {
     function handleShiftEnter(e) {
@@ -257,7 +309,7 @@ export default function App() {
   const getTypedCharsCount = () => {
     let count = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-      count += words[i].length + 1;
+      count += (words[i]?.length || 0) + 1;
     }
     count += currentInput.length;
     return count;
@@ -280,7 +332,7 @@ export default function App() {
     if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") return;
     if (document.activeElement !== containerRef.current) containerRef.current.focus();
     if (!isActive) setIsActive(true);
-    const currentWord = words[currentWordIndex];
+    const currentWord = words[currentWordIndex] || "";
     if (e.key === "Backspace") {
       e.preventDefault();
       if (currentInput.length > 0) setCurrentInput(currentInput.slice(0, -1));
@@ -292,9 +344,7 @@ export default function App() {
       if (currentInput === "") return;
       const expectedWithSpace = currentWord + " ";
       const results = expectedWithSpace.split("").map((char, i) => i < currentInput.length ? currentInput[i] === char : false);
-      if (currentInput.length >= currentWord.length) {
-        results[currentWord.length] = true;
-      }
+      if (currentInput.length >= currentWord.length) results[currentWord.length] = true;
       setCharResults((cr) => {
         const newCr = [...cr];
         newCr[currentWordIndex] = results;
@@ -326,10 +376,38 @@ export default function App() {
   return (
     <>
       {page === "home" && (
-        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} onKeyDown={handleKeyDown} tabIndex={0} ref={containerRef}>
-          <Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} />
-          <MetricsBox metricsBoxFlipped={metricsBoxFlipped} liquidActive={liquidActive} testDuration={testDuration} resetTest={resetTest} wpm={wpmLive} accuracy={accuracyLive} />
-          <TypingArea typingBoxRef={typingBoxRef} words={words} currentWordIndex={currentWordIndex} currentInput={currentInput} charResults={charResults} timeLeft={timeLeft} isActive={isActive} />
+        <div
+          className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          ref={containerRef}
+        >
+          <Navbar
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
+          />
+          <MetricsBox
+            metricsBoxFlipped={metricsBoxFlipped}
+            liquidActive={liquidActive}
+            testDuration={testDuration}
+            resetTest={resetTest}
+            wpm={wpmLive}
+            accuracy={accuracyLive}
+          />
+          <TypingArea
+            typingBoxRef={typingBoxRef}
+            words={words}
+            currentWordIndex={currentWordIndex}
+            currentInput={currentInput}
+            charResults={charResults}
+            timeLeft={timeLeft}
+            isActive={isActive}
+          />
           {showResults && (
             <ResultsPopup
               setShowResults={setShowResults}
@@ -347,11 +425,63 @@ export default function App() {
           <ResetButton resetTest={() => resetTest(testDuration)} />
         </div>
       )}
-      {page === "tracks" && <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}><Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} /><Tracks tracks={tracks} onCloseTracks={handleCloseTracks} onClearAll={handleClearTracks} /></div>}
-      {page === "controlDen" && <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}><Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} /><ControlDen isDarkMode={isDarkMode} userStats={userStats} /></div>}
-      {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} isDarkMode={isDarkMode} triggerInfoPopup={triggerInfoPopup} setShowForgotPassword={setShowForgotPassword} />}
-      {showForgotPassword && <ForgotPasswordPopup setShow={setShowForgotPassword} triggerInfoPopup={triggerInfoPopup} isDarkMode={isDarkMode} />}
-      {showInfoPopup && <InfoPopup message={infoPopupMessage} onClose={() => setShowInfoPopup(false)} isDarkMode={isDarkMode} />}
+
+      {page === "tracks" && (
+        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
+          <Navbar
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
+          />
+          <Tracks
+            tracks={tracks}
+            onCloseTracks={handleCloseTracks}
+            onClearAll={handleClearTracks}
+          />
+        </div>
+      )}
+
+      {page === "controlDen" && (
+        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
+          <Navbar
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            resetTest={resetTest}
+            setShowAuthPopup={setShowAuthPopup}
+            showTracks={handleShowTracks}
+            showControlDen={handleShowControlDen}
+            goHome={handleGoHome}
+          />
+          <ControlDen isDarkMode={isDarkMode} userStats={userStats} />
+        </div>
+      )}
+
+      {showAuthPopup && (
+        <AuthPopup
+          setShowAuthPopup={setShowAuthPopup}
+          isDarkMode={isDarkMode}
+          triggerInfoPopup={triggerInfoPopup}
+          setShowForgotPassword={setShowForgotPassword}
+        />
+      )}
+      {showForgotPassword && (
+        <ForgotPasswordPopup
+          setShow={setShowForgotPassword}
+          triggerInfoPopup={triggerInfoPopup}
+          isDarkMode={isDarkMode}
+        />
+      )}
+      {showInfoPopup && (
+        <InfoPopup
+          message={infoPopupMessage}
+          onClose={() => setShowInfoPopup(false)}
+          isDarkMode={isDarkMode}
+        />
+      )}
       <div className="bg-blur"></div>
     </>
   );
