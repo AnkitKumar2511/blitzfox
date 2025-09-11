@@ -9,7 +9,7 @@ import ResetButton from "./components/ResetButton/ResetButton";
 import Tracks from "./components/Tracks/Tracks";
 import ControlDen from "./components/ControlDen/ControlDen";
 import InfoPopup from "./components/InfoPopup.jsx";
-
+import ForgotPasswordPopup from "./components/ForgotPasswordPopup/ForgotPasswordPopup.jsx";
 import { useAuth } from "./context/AuthContext.jsx";
 import { db } from "./firebase";
 import {
@@ -57,6 +57,7 @@ export default function App() {
 
   const [showResults, setShowResults] = useState(false);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const [historyWPM, setHistoryWPM] = useState([]);
   const [highestWPM, setHighestWPM] = useState(0);
@@ -74,7 +75,7 @@ export default function App() {
     estimatedErrors: 0,
     highestWpm: 0,
     highestRaw: 0,
-    totalAccuracy: 0, // <-- NEW: For calculating average accuracy
+    totalAccuracy: 0,
   });
 
   const containerRef = useRef(null);
@@ -109,19 +110,24 @@ export default function App() {
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((t) => t - 1);
-        const typedCharsCount = getTypedCharsCount();
-        const correctCharsCount = getCorrectCharsCount();
-        const elapsed = testDuration - (timeLeft - 1);
-        const elapsedMin = elapsed / 60;
-        const raw = elapsedMin > 0 ? typedCharsCount / 5 / elapsedMin : 0;
-        const net = elapsedMin > 0 ? correctCharsCount / 5 / elapsedMin : 0;
-        const errors = typedCharsCount - correctCharsCount;
-        setRawWPM(raw);
-        setErrorCount(errors);
-        setHistoryWPM((prev) => [...prev, net]);
-        setHighestWPM((prev) => Math.max(prev, net));
-        setLowestWPM((prev) => Math.min(prev, net));
+        setTimeLeft((t) => {
+            const newTimeLeft = t - 1;
+            const typedCharsCount = getTypedCharsCount();
+            const correctCharsCount = getCorrectCharsCount();
+            const elapsed = testDuration - newTimeLeft;
+            const elapsedMin = elapsed / 60;
+            const currentRaw = elapsedMin > 0 ? typedCharsCount / 5 / elapsedMin : 0;
+            const currentNet = elapsedMin > 0 ? correctCharsCount / 5 / elapsedMin : 0;
+            
+            // Correctly update state to track the PEAK values
+            setRawWPM((prev) => Math.max(prev, currentRaw));
+            setHighestWPM((prev) => Math.max(prev, currentNet));
+            setLowestWPM((prev) => Math.min(prev, currentNet));
+            setErrorCount(typedCharsCount - correctCharsCount);
+            setHistoryWPM((prev) => [...prev, currentNet]);
+            
+            return newTimeLeft;
+        });
       }, 1000);
     }
     return () => clearInterval(interval);
@@ -130,20 +136,36 @@ export default function App() {
   useEffect(() => {
     if (timeLeft === 0 && isActive) {
       setIsActive(false);
-      setShowResults(true);
-
+      
       const typedCharsCount = getTypedCharsCount();
       const correctCharsCount = getCorrectCharsCount();
       const elapsedMin = testDuration / 60;
-      const wpm = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
-      const accuracy =
-        typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
+      
+      // Calculate final net and raw WPM
+      const finalWpm = elapsedMin > 0 ? (correctCharsCount / 5) / elapsedMin : 0;
+      const finalRawWpm = elapsedMin > 0 ? (typedCharsCount / 5) / elapsedMin : 0;
+      const finalAccuracy = typedCharsCount > 0 ? (correctCharsCount / typedCharsCount) * 100 : 0;
+      const finalErrorCount = typedCharsCount - correctCharsCount;
+
+      // Ensure the correct hierarchy is maintained
+      const finalHighestWpm = Math.max(highestWPM, finalWpm);
+      const assuredRawWpm = Math.max(rawWPM, finalRawWpm, finalHighestWpm);
+      
+      // Update state with the final, assured values before showing results
+      setRawWPM(assuredRawWpm);
+      setHighestWPM(finalHighestWpm);
+      setErrorCount(finalErrorCount);
+
+      // Now show the results popup
+      setShowResults(true);
 
       const newTrack = {
-        wpm: parseFloat(wpm.toFixed(2)),
-        accuracy: parseFloat(accuracy.toFixed(2)),
-        errors: errorCount,
-        rawWpm: parseFloat(rawWPM.toFixed(2)),
+        wpm: parseFloat(finalWpm.toFixed(2)),
+        accuracy: parseFloat(finalAccuracy.toFixed(2)),
+        errors: finalErrorCount,
+        rawWpm: parseFloat(assuredRawWpm.toFixed(2)), // Pass the assured peak raw
+        highestWpm: parseFloat(finalHighestWpm.toFixed(2)), // Pass the assured peak net
+        lowestWpm: isFinite(lowestWPM) ? parseFloat(lowestWPM.toFixed(2)) : 0,
         testDuration,
         createdAt: serverTimestamp(),
       };
@@ -151,40 +173,29 @@ export default function App() {
       if (currentUser) {
         const saveTrackAndUpdateStats = async () => {
           try {
-            await addDoc(collection(db, "tests"), {
-              ...newTrack,
-              userId: currentUser.uid,
-            });
-
+            await addDoc(collection(db, "tests"), { ...newTrack, userId: currentUser.uid });
             const statsRef = doc(db, "userStats", currentUser.uid);
             const newStats = {
               totalTests: (userStats.totalTests || 0) + 1,
               totalTime: (userStats.totalTime || 0) + testDuration,
               estimatedWords: (userStats.estimatedWords || 0) + (correctCharsCount / 5),
-              estimatedErrors: (userStats.estimatedErrors || 0) + errorCount,
-              highestWpm: Math.max(userStats.highestWpm || 0, wpm),
-              highestRaw: Math.max(userStats.highestRaw || 0, rawWPM),
-              totalAccuracy: (userStats.totalAccuracy || 0) + accuracy, // <-- NEW
+              estimatedErrors: (userStats.estimatedErrors || 0) + finalErrorCount,
+              highestWpm: Math.max(userStats.highestWpm || 0, newTrack.highestWpm),
+              highestRaw: Math.max(userStats.highestRaw || 0, newTrack.rawWpm),
+              totalAccuracy: (userStats.totalAccuracy || 0) + finalAccuracy,
             };
             await setDoc(statsRef, newStats, { merge: true });
             setUserStats(newStats);
           } catch (error) {
-            console.error("Error saving  ", error);
+            console.error("Error saving track and stats: ", error);
           }
         };
         saveTrackAndUpdateStats();
       }
 
-      setTracks((prev) => [
-        {
-          ...newTrack,
-          id: Date.now(),
-          dateTimeDisplay: new Date().toLocaleString("en-IN"),
-        },
-        ...prev,
-      ]);
+      setTracks((prev) => [{ ...newTrack, id: Date.now(), dateTimeDisplay: new Date().toLocaleString("en-IN") }, ...prev]);
     }
-  }, [timeLeft, isActive, currentUser, testDuration, rawWPM, errorCount, userStats]);
+  }, [timeLeft, isActive, currentUser, testDuration, highestWPM, lowestWPM, rawWPM, userStats]);
   
   useEffect(() => {
     const fetchUserData = async () => {
@@ -194,29 +205,15 @@ export default function App() {
         return;
       }
       
-      const q = query(
-        collection(db, "tests"),
-        where("userId", "==", currentUser.uid),
-        orderBy("createdAt", "desc")
-      );
+      const q = query(collection(db, "tests"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      const userTracks = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          dateTimeDisplay: data.createdAt?.toDate().toLocaleString("en-IN") || 'N/A',
-        };
-      });
+      const userTracks = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), dateTimeDisplay: doc.data().createdAt?.toDate().toLocaleString("en-IN") || 'N/A' }));
       setTracks(userTracks);
 
       const statsRef = doc(db, "userStats", currentUser.uid);
       const statsSnap = await getDoc(statsRef);
-      if (statsSnap.exists()) {
-        setUserStats(statsSnap.data());
-      }
+      if (statsSnap.exists()) setUserStats(statsSnap.data());
     };
-
     fetchUserData();
   }, [currentUser]);
 
@@ -232,18 +229,11 @@ export default function App() {
 
   useEffect(() => {
     if (typingBoxRef.current && currentWordIndex > 0) {
-      const currentWordEl = document.querySelector(
-        `[data-word-index="${currentWordIndex}"]`
-      );
-      const prevWordEl = document.querySelector(
-        `[data-word-index="${currentWordIndex - 1}"]`
-      );
+      const currentWordEl = document.querySelector(`[data-word-index="${currentWordIndex}"]`);
+      const prevWordEl = document.querySelector(`[data-word-index="${currentWordIndex - 1}"]`);
       if (currentWordEl && prevWordEl && currentWordEl.offsetTop > prevWordEl.offsetTop) {
         typingBoxRef.current.scrollTop = currentWordEl.offsetTop;
-
-        const newLine = Array(20)
-          .fill(0)
-          .map(() => WORDS_POOL[Math.floor(Math.random() * WORDS_POOL.length)]);
+        const newLine = generateWordsArray(20);
         setWords((w) => {
           const newWords = [...w, ...newLine];
           setCharResults((cr) => [...cr, ...newLine.map(() => [])]);
@@ -261,9 +251,7 @@ export default function App() {
       }
     }
     window.addEventListener("keydown", handleShiftEnter);
-    return () => {
-      window.removeEventListener("keydown", handleShiftEnter);
-    };
+    return () => window.removeEventListener("keydown", handleShiftEnter);
   }, [testDuration, resetTest]);
 
   const getTypedCharsCount = () => {
@@ -278,198 +266,92 @@ export default function App() {
   const getCorrectCharsCount = () => {
     let correct = 0;
     for (let i = 0; i < currentWordIndex; i++) {
-      const resultForWordAndSpace = charResults[i] || [];
-      correct += resultForWordAndSpace.filter((r) => r === true).length;
+      correct += (charResults[i] || []).filter(Boolean).length;
     }
-    const currentExpected = words[currentWordIndex] + " ";
+    const currentWord = words[currentWordIndex] || "";
     for (let i = 0; i < currentInput.length; i++) {
-      if (currentInput[i] === currentExpected[i]) {
-        correct++;
-      }
+      if (currentInput[i] === currentWord[i]) correct++;
     }
     return correct;
   };
 
   function handleKeyDown(e) {
     if (timeLeft === 0) return;
-
-    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") {
-      return;
-    }
-
-    if (document.activeElement !== containerRef.current) {
-      containerRef.current.focus();
-    }
-
+    if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Enter") return;
+    if (document.activeElement !== containerRef.current) containerRef.current.focus();
     if (!isActive) setIsActive(true);
-
     const currentWord = words[currentWordIndex];
-
     if (e.key === "Backspace") {
       e.preventDefault();
-      if (currentInput.length > 0) {
-        setCurrentInput(currentInput.slice(0, -1));
-      } else if (currentWordIndex > 0) {
-        setCurrentWordIndex(currentWordIndex - 1);
-      }
+      if (currentInput.length > 0) setCurrentInput(currentInput.slice(0, -1));
+      else if (currentWordIndex > 0) setCurrentWordIndex(currentWordIndex - 1);
       return;
     }
-
     if (e.key === " ") {
       e.preventDefault();
-
       if (currentInput === "") return;
-
       const expectedWithSpace = currentWord + " ";
-      const results = expectedWithSpace.split("").map((char, i) => {
-        if (i < currentInput.length) {
-          return currentInput[i] === char;
-        }
-        if (i === currentWord.length) {
-          return currentInput.length === currentWord.length;
-        }
-        return false;
-      });
-
+      const results = expectedWithSpace.split("").map((char, i) => i < currentInput.length ? currentInput[i] === char : false);
+      if (currentInput.length >= currentWord.length) {
+        results[currentWord.length] = true;
+      }
       setCharResults((cr) => {
         const newCr = [...cr];
         newCr[currentWordIndex] = results;
         return newCr;
       });
-
       setCurrentWordIndex((i) => i + 1);
       setCurrentInput("");
       return;
     }
-
     if (/^[a-zA-Z]$/.test(e.key)) {
       e.preventDefault();
-      if (currentInput.length < currentWord.length) {
-        setCurrentInput((c) => c + e.key.toLowerCase());
-      }
+      if (currentInput.length < currentWord.length) setCurrentInput((c) => c + e.key.toLowerCase());
     }
   }
 
-  const typedCharsCount = getTypedCharsCount();
-  const correctChars = getCorrectCharsCount();
-  const elapsedMin = (testDuration - timeLeft) / 60;
-  const wpm = elapsedMin > 0 ? correctChars / 5 / elapsedMin : 0;
-  const accuracy = typedCharsCount > 0 ? (correctChars / typedCharsCount) * 100 : 0;
+  const typedCharsCountLive = getTypedCharsCount();
+  const correctCharsLive = getCorrectCharsCount();
+  const elapsedMinLive = (testDuration - timeLeft) / 60;
+  const wpmLive = elapsedMinLive > 0 ? correctCharsLive / 5 / elapsedMinLive : 0;
+  const accuracyLive = typedCharsCountLive > 0 ? (correctCharsLive / typedCharsCountLive) * 100 : 0;
 
   const handleShowTracks = () => setPage("tracks");
   const handleGoHome = () => setPage("home");
   const handleCloseTracks = () => setPage("home");
   const handleClearTracks = () => setTracks([]);
   const handleShowControlDen = () => setPage("controlDen");
-
-  const triggerInfoPopup = (message) => {
-    setInfoPopupMessage(message);
-    setShowInfoPopup(true);
-  };
+  const triggerInfoPopup = (message) => { setInfoPopupMessage(message); setShowInfoPopup(true); };
 
   return (
     <>
       {page === "home" && (
-        <div
-          className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}
-          onKeyDown={handleKeyDown}
-          tabIndex={0}
-          ref={containerRef}
-        >
-          <Navbar
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            resetTest={resetTest}
-            setShowAuthPopup={setShowAuthPopup}
-            showTracks={handleShowTracks}
-            showControlDen={handleShowControlDen}
-            goHome={handleGoHome}
-          />
-
-          <MetricsBox
-            metricsBoxFlipped={metricsBoxFlipped}
-            liquidActive={liquidActive}
-            testDuration={testDuration}
-            resetTest={resetTest}
-            wpm={wpm}
-            accuracy={accuracy}
-          />
-
-          <TypingArea
-            typingBoxRef={typingBoxRef}
-            words={words}
-            currentWordIndex={currentWordIndex}
-            currentInput={currentInput}
-            charResults={charResults}
-            timeLeft={timeLeft}
-            isActive={isActive}
-          />
-
+        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"} onKeyDown={handleKeyDown} tabIndex={0} ref={containerRef}>
+          <Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} />
+          <MetricsBox metricsBoxFlipped={metricsBoxFlipped} liquidActive={liquidActive} testDuration={testDuration} resetTest={resetTest} wpm={wpmLive} accuracy={accuracyLive} />
+          <TypingArea typingBoxRef={typingBoxRef} words={words} currentWordIndex={currentWordIndex} currentInput={currentInput} charResults={charResults} timeLeft={timeLeft} isActive={isActive} />
           {showResults && (
             <ResultsPopup
               setShowResults={setShowResults}
               resetTest={resetTest}
               testDuration={testDuration}
               historyWPM={historyWPM}
-              wpm={wpm}
-              accuracy={accuracy}
+              wpm={wpmLive}
+              accuracy={accuracyLive}
               rawWPM={rawWPM}
               highestWPM={highestWPM}
               lowestWPM={lowestWPM}
               errorCount={errorCount}
             />
           )}
-
           <ResetButton resetTest={() => resetTest(testDuration)} />
         </div>
       )}
-
-      {page === "tracks" && (
-        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
-          <Navbar
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            resetTest={resetTest}
-            setShowAuthPopup={setShowAuthPopup}
-            showTracks={handleShowTracks}
-            showControlDen={handleShowControlDen}
-            goHome={handleGoHome}
-          />
-          <Tracks tracks={tracks} onCloseTracks={handleCloseTracks} onClearAll={handleClearTracks} />
-        </div>
-      )}
-
-      {page === "controlDen" && (
-        <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}>
-          <Navbar
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            resetTest={resetTest}
-            setShowAuthPopup={setShowAuthPopup}
-            showTracks={handleShowTracks}
-            showControlDen={handleShowControlDen}
-            goHome={handleGoHome}
-          />
-          <ControlDen isDarkMode={isDarkMode} userStats={userStats} />
-        </div>
-      )}
-
-      {showAuthPopup && (
-        <AuthPopup
-          setShowAuthPopup={setShowAuthPopup}
-          isDarkMode={isDarkMode}
-          triggerInfoPopup={triggerInfoPopup}
-        />
-      )}
-      
-      {showInfoPopup && (
-        <InfoPopup
-          message={infoPopupMessage}
-          onClose={() => setShowInfoPopup(false)}
-          isDarkMode={isDarkMode}
-        />
-      )}
-
+      {page === "tracks" && <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}><Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} /><Tracks tracks={tracks} onCloseTracks={handleCloseTracks} onClearAll={handleClearTracks} /></div>}
+      {page === "controlDen" && <div className={isDarkMode ? "app-wrapper dark" : "app-wrapper light"}><Navbar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} resetTest={resetTest} setShowAuthPopup={setShowAuthPopup} showTracks={handleShowTracks} showControlDen={handleShowControlDen} goHome={handleGoHome} /><ControlDen isDarkMode={isDarkMode} userStats={userStats} /></div>}
+      {showAuthPopup && <AuthPopup setShowAuthPopup={setShowAuthPopup} isDarkMode={isDarkMode} triggerInfoPopup={triggerInfoPopup} setShowForgotPassword={setShowForgotPassword} />}
+      {showForgotPassword && <ForgotPasswordPopup setShow={setShowForgotPassword} triggerInfoPopup={triggerInfoPopup} isDarkMode={isDarkMode} />}
+      {showInfoPopup && <InfoPopup message={infoPopupMessage} onClose={() => setShowInfoPopup(false)} isDarkMode={isDarkMode} />}
       <div className="bg-blur"></div>
     </>
   );

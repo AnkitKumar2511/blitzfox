@@ -6,6 +6,7 @@
   transform: translate(-50%, -50%);
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 20px;
   padding: 30px 25px;
   z-index: 300;
@@ -42,15 +43,18 @@
 }
 .auth-popup.light .social-btn {
   border: 1px solid #000;
-  color: #000; /* This makes the icons black */
+  color: #000;
 }
-.auth-popup.light .auth-toggle button {
+.auth-popup.light .auth-toggle button,
+.auth-popup.light .forgot-password-button {
   background-color: rgba(0, 0, 0, 0.05);
   border: 1px solid rgba(0, 0, 0, 0.7);
   color: #000;
 }
-.auth-popup.light .auth-toggle button:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(0.97); }
-.auth-popup.light .auth-toggle button:active { background-color: rgba(0, 0, 0, 0.15); transform: scale(0.95); }
+.auth-popup.light .auth-toggle button:hover,
+.auth-popup.light .forgot-password-button:hover { background-color: rgba(0, 0, 0, 0.1); transform: scale(0.97); }
+.auth-popup.light .auth-toggle button:active,
+.auth-popup.light .forgot-password-button:active { background-color: rgba(0, 0, 0, 0.15); transform: scale(0.95); }
 
 /* Dark mode styles */
 .auth-popup.dark {
@@ -76,15 +80,18 @@
 }
 .auth-popup.dark .social-btn {
   border: 1px solid #ffffff84;
-  color: #fff; /* This makes the icons white */
+  color: #fff;
 }
-.auth-popup.dark .auth-toggle button {
+.auth-popup.dark .auth-toggle button,
+.auth-popup.dark .forgot-password-button {
   background-color: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.686);
   color: #fff;
 }
-.auth-popup.dark .auth-toggle button:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(0.97); }
-.auth-popup.dark .auth-toggle button:active { background-color: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
+.auth-popup.dark .auth-toggle button:hover,
+.auth-popup.dark .forgot-password-button:hover { background-color: rgba(255, 255, 255, 0.15); transform: scale(0.97); }
+.auth-popup.dark .auth-toggle button:active,
+.auth-popup.dark .forgot-password-button:active { background-color: rgba(255, 255, 255, 0.2); transform: scale(0.95); }
 
 
 /* Common Styles (apply to both modes) */
@@ -120,9 +127,9 @@
 .auth-input:focus { border-color: #66aaff; }
 
 .auth-submit {
-  display: block; /* This is key for centering */
-  margin: 10px auto 0; /* This centers the button horizontally */
-  padding: 10px 40px; /* Adjust padding to give it a nice width */
+  display: block;
+  margin: 10px auto 0;
+  padding: 10px 40px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
@@ -136,7 +143,6 @@
 .auth-social {
   display: flex;
   gap: 21px; 
-  margin-top: 10px;
   justify-content: center;
 }
 
@@ -166,7 +172,6 @@
 
 .auth-toggle {
   text-align: center;
-  margin-top: 15px;
   font-size: 0.9rem;
   color: inherit;
 }
@@ -174,6 +179,20 @@
 .auth-toggle button {
   padding: 6px 12px;
   margin-left: 5px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.15s ease, border 0.25s ease, color 0.25s ease;
+}
+
+/* === STYLES FOR FORGOT PASSWORD BUTTON === */
+.forgot-password-container {
+  text-align: center;
+  margin-top: -5px; /* Adjust spacing */
+}
+
+.forgot-password-button {
+  padding: 6px 12px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;

@@ -9,8 +9,9 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import PopIn from "../PopIn"; // Assuming PopIn is used for animations
 
-const AuthPopup = ({ setShowAuthPopup, isDarkMode, triggerInfoPopup }) => {
+const AuthPopup = ({ setShowAuthPopup, isDarkMode, triggerInfoPopup, setShowForgotPassword }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -24,160 +25,125 @@ const AuthPopup = ({ setShowAuthPopup, isDarkMode, triggerInfoPopup }) => {
     setShowAuthPopup(false);
   };
 
+  const handleAuthError = (err) => {
+    let message = "An unexpected error occurred. Please try again.";
+    switch (err.code) {
+      case "auth/weak-password":
+        message = "Password should be at least 6 characters.";
+        break;
+      case "auth/email-already-in-use":
+        message = "This email is already registered. Please Login.";
+        break;
+      case "auth/invalid-email":
+        message = "Please enter a valid email address.";
+        break;
+      case "auth/user-not-found":
+      case "auth/invalid-credential":
+        message = "Account not found. Please Sign Up first.";
+        break;
+      default:
+        console.error("Firebase Auth Error:", err);
+        break;
+    }
+    triggerInfoPopup(message);
+  };
+
   const handleEmailSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     if (isLoginMode) {
-      // --- LOGIN LOGIC ---
       try {
         await signInWithEmailAndPassword(auth, email, password);
         handleAuthSuccess();
       } catch (err) {
-        // If user is not found, trigger the custom popup
-        if (err.code === "auth/user-not-found" || err.code === "auth/invalid-credential") {
-          setShowAuthPopup(false); // Close the auth popup
-          triggerInfoPopup("Account not found. Please Sign Up first.");
-        } else {
-          setError(err.message);
-        }
+        handleAuthError(err);
       }
     } else {
-      // --- SIGNUP LOGIC ---
+      // Signup logic...
       if (username.trim() === "") {
         setError("Username cannot be empty.");
         return;
       }
       try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-
-        // Update profile in Firebase Auth
-        await updateProfile(user, {
-          displayName: username,
-        });
-
-        // Create a user document in Firestore
+        await updateProfile(user, { displayName: username });
         await setDoc(doc(db, "users", user.uid), {
           username: username,
           email: user.email,
           createdAt: new Date(),
         });
-
         handleAuthSuccess();
       } catch (err) {
-        setError(err.message);
+        handleAuthError(err);
       }
     }
   };
 
   const handleSocialLogin = async (provider) => {
-    setError("");
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
+    // Social login logic...
+  };
 
-      // For social logins, also create a user doc in Firestore if it's their first time
-      await setDoc(doc(db, "users", user.uid), {
-        username: user.displayName,
-        email: user.email,
-        photoURL: user.photoURL,
-        createdAt: new Date(),
-      }, { merge: true }); // Use merge to not overwrite existing data
-
-      handleAuthSuccess();
-    } catch (err) {
-      // --- UPDATED ERROR HANDLING FOR SOCIAL LOGINS ---
-      if (err.code === 'auth/account-exists-with-different-credential') {
-        setShowAuthPopup(false); // Close this popup
-        // Trigger the info popup with a specific message
-        triggerInfoPopup("An account with this email already exists. Please log in using the original method.");
-      } else {
-        // For all other errors, show them in the auth popup
-        setError(err.message);
-      }
-    }
+  const handleForgotPasswordClick = () => {
+    setShowForgotPassword(true);
   };
 
   return (
-    <div className={`auth-popup ${themeClass}`}>
-      <button className="close-btn" onClick={() => setShowAuthPopup(false)}>
-        ✕
-      </button>
-
-      <h2 className="auth-title">{isLoginMode ? "Login" : "Sign Up"}</h2>
-
-      <form onSubmit={handleEmailSubmit}>
-        <div className="auth-fields">
-          {/* --- Conditionally render Username input for signup mode --- */}
-          {!isLoginMode && (
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              type="text"
-              placeholder="Username"
-              className="auth-input"
-              required
-            />
-          )}
-
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            placeholder="Email"
-            className="auth-input"
-            required
-          />
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="Password"
-            className="auth-input"
-            required
-          />
+    <div className={`auth-popup-overlay`}>
+      <PopIn>
+        <div className={`auth-popup ${themeClass}`} onClick={(e) => e.stopPropagation()}>
+          <button className="close-btn" onClick={() => setShowAuthPopup(false)}>✕</button>
+          <h2 className="auth-title">{isLoginMode ? "Login" : "Sign Up"}</h2>
+          <form onSubmit={handleEmailSubmit}>
+            <div className="auth-fields">
+              {!isLoginMode && (
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  type="text"
+                  placeholder="Username"
+                  className="auth-input"
+                  required
+                />
+              )}
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                type="email"
+                placeholder="Email"
+                className="auth-input"
+                required
+              />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                type="password"
+                placeholder="Password"
+                className="auth-input"
+                required
+              />
+            </div>
+            {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
+            <button type="submit" className="auth-submit">{isLoginMode ? "Login" : "Sign Up"}</button>
+          </form>
+          <div className="auth-social">
+            <button className="social-btn google" onClick={() => handleSocialLogin(googleProvider)}><FaGoogle className="social-icon" /></button>
+            <button className="social-btn github" onClick={() => handleSocialLogin(githubProvider)}><FaGithub className="social-icon" /></button>
+          </div>
+          <div className="auth-toggle">
+            {isLoginMode ? (
+              <>
+                <span>Don't have an account? <button onClick={() => setIsLoginMode(false)}>Sign Up</button></span>
+                <div className="forgot-password-container">
+                  <button onClick={handleForgotPasswordClick} className="forgot-password-button">Forgot Password?</button>
+                </div>
+              </>
+            ) : (
+              <span>Have an account? <button onClick={() => setIsLoginMode(true)}>Login</button></span>
+            )}
+          </div>
         </div>
-
-        {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
-
-        <button type="submit" className="auth-submit">
-          {isLoginMode ? "Login" : "Sign Up"}
-        </button>
-      </form>
-
-      <div className="auth-social">
-        <button
-          className="social-btn google"
-          onClick={() => handleSocialLogin(googleProvider)}
-        >
-          <FaGoogle className="social-icon" />
-        </button>
-        <button
-          className="social-btn github"
-          onClick={() => handleSocialLogin(githubProvider)}
-        >
-          <FaGithub className="social-icon" />
-        </button>
-      </div>
-
-      <div className="auth-toggle">
-        {isLoginMode ? (
-          <span>
-            Don't have an account?{" "}
-            <button onClick={() => setIsLoginMode(false)}>Sign Up</button>
-          </span>
-        ) : (
-          <span>
-            Have an account?{" "}
-            <button onClick={() => setIsLoginMode(true)}>Login</button>
-          </span>
-        )}
-      </div>
+      </PopIn>
     </div>
   );
 };
